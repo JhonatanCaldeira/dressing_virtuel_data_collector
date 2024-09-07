@@ -4,7 +4,7 @@ from .models import Image
 
 def image_list(request):
     images = Image.objects.all()
-    paginator = Paginator(images, 20)  # 20 imagens por página
+    paginator = Paginator(images, 50)  # 20 imagens por página
 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)

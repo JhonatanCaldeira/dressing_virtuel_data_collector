@@ -11,7 +11,7 @@ csv_file_path = dataset_path + '/images.csv'  # Substitua pelo caminho real do a
 df = pd.read_csv(csv_file_path)
 
 # Diretório de origem das imagens
-source_dir = os.path.join(dataset_path, 'images_original')
+source_dir = os.path.join(dataset_path, 'images_compressed')
 
 # Diretório de destino das imagens
 dest_dir = os.path.join(settings.MEDIA_ROOT, 'images')
@@ -24,7 +24,7 @@ categories = df['label'].unique()
 images_to_import = []
 
 for category in categories:
-    category_images = df[df['label'] == category].head(10)
+    category_images = df[df['label'] == category].head(100)
     images_to_import.append(category_images)
 
 # Concatenar todas as imagens a serem importadas
