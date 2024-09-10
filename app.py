@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import article_type, color, gender, season, usage_type, subcategory, category, Base, image_product
+from models.model import ArticleType, Category, Color, Gender, ImageProduct, Season, SubCategory, UsageType, Base
 from sqlalchemy_utils import database_exists, drop_database, create_database
 
 import yaml
@@ -37,47 +37,47 @@ def load_dataframe(df, header):
 
     for item in df:       
         if header == 'gender':
-            new_item = gender.Gender(
+            new_item = Gender(
                 gender = item
             )
         elif header == 'baseColour':
-            new_item = color.Color(
+            new_item = Color(
                 name = item
             )
         elif header == 'season':
-            new_item = season.Season(
+            new_item = Season(
                 name = item
             )
         elif header == 'usage':
-            new_item = usage_type.UsageType(
+            new_item = UsageType(
                 name = item
             )
         elif header == 'masterCategory':
-            new_item = category.Category(
+            new_item = Category(
                 name = item
             )
         elif header == 'subCategory':
             print(item)
             query = session.query(
-                category.Category.id
+                Category.id
             ).filter_by(name = item[1][0]).first()
 
             if query is None:
                 continue
 
-            new_item = subcategory.SubCategory(
+            new_item = SubCategory(
                 name = item[0],
                 id_category = query[0]
             ) 
         elif header == 'articleType':
             query = session.query(
-                subcategory.SubCategory.id
+                SubCategory.id
             ).filter_by(name = item[1][0]).first()    
 
             if query is None:
                 continue
 
-            new_item = article_type.ArticleType(
+            new_item = ArticleType(
                 name = item[0],
                 id_subcategory = query[0]
             )
