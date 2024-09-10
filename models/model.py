@@ -4,6 +4,8 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
+# Modelos SQLAlchemy para a base de dados
+
 class Color(Base):
     __tablename__ = 'tb_colors'
 
