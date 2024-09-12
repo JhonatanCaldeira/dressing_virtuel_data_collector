@@ -60,3 +60,16 @@ def create_color(db: Session, color: schema.Color):
     db.commit()
     db.refresh(db_color)
     return db_color
+
+def create_image_product(db: Session, image: schema.ImageProduct):
+    db_image = model.ImageProduct(
+                                path=image.path,
+                                id_usagetype=image.id_usagetype,
+                                id_gender=image.id_gender,
+                                id_season=image.id_season,
+                                id_color=image.id_color,
+                                id_articletype=image.id_articletype)
+    db.add(db_image)
+    db.commit()
+    db.refresh(db_image)
+    return db_image

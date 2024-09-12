@@ -8,19 +8,19 @@ class Color(BaseModel):
     name: str
 
 class Season(BaseModel):
-    id: int
+    id: int|None
     name: str
 
 class Gender(BaseModel):
-    id: int
+    id: int|None
     gender: str
 
 class UsageType(BaseModel):
-    id: int
+    id: int|None
     name: str
 
 class ArticleType(BaseModel):
-    id: int
+    id: int|None
     name: str
     id_subcategory: int
 
@@ -28,7 +28,7 @@ class ArticleType(BaseModel):
         orm_mode = True  
 
 class SubCategory(BaseModel):
-    id: int
+    id: int|None
     name: str
     id_category: int
     article_types: list[ArticleType] = []
@@ -37,12 +37,12 @@ class SubCategory(BaseModel):
         orm_mode = True
 
 class Category(BaseModel):
-    id: int
+    id: int|None
     name: str
     sub_categories: list[SubCategory] = []
 
 class ImageProduct(BaseModel):
-    id: int
+    id: int|None
     path: str
     id_usagetype: int
     id_gender: int

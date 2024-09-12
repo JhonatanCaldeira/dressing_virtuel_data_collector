@@ -62,3 +62,8 @@ def get_subcategoriess(skip: int = 0, limit: int = 100, db: Session = Depends(ge
 def get_article_types(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     colors = crud.get_article_types(db, skip=skip, limit=limit)
     return colors
+
+@app.post(f"/{PREFIX}/import_image/", response_model=schema.ImageProduct)
+def create_image_product( image:schema.ImageProduct, db: Session = Depends(get_db)):
+    db_image = crud.create_image_product(db, image)
+    return db_image
