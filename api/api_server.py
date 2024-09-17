@@ -67,3 +67,13 @@ def get_article_types(skip: int = 0, limit: int = 100, db: Session = Depends(get
 def create_image_product( image:schema.ImageProduct, db: Session = Depends(get_db)):
     db_image = crud.create_image_product(db, image)
     return db_image
+
+@app.get(f"/{PREFIX}/images_categories/", response_model=list[schema.ImageProductDetailed])
+def get_all_images(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    images = crud.get_images_and_categories(db, skip=skip, limit=limit)
+    return images
+
+@app.get(f"/{PREFIX}/images/", response_model=list[schema.ImageProduct])
+def get_all_images(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    images = crud.get_images(db, skip=skip, limit=limit)
+    return images

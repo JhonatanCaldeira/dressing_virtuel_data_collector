@@ -52,3 +52,16 @@ class ImageProduct(BaseModel):
 
     class Config:
         orm_mode = True
+
+class ImageProductDetailed(BaseModel):
+    id: int
+    path: str
+    gender: str
+    color: str
+    season: str
+    article: str
+    category: str
+    sub_category: str
+    usage_type: str
+    class Config:
+        orm_mode = True
