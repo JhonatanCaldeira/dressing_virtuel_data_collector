@@ -131,3 +131,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Configurações para arquivos de mídia
 MEDIA_URL = '/media/'  # URL que será usada para servir os arquivos de mídia
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Diretório onde os arquivos de mídia serão armazenados
+
+# Configuração para servir imagens de um diretório externo
+EXTERNAL_IMAGES_URL = '/images/'  # URL base para acessar as imagens no navegador
+EXTERNAL_IMAGES_ROOT = '/home/jcaldeira/dressing_virtuel_data_collector/image_scraper/images/full/'  # Caminho absoluto

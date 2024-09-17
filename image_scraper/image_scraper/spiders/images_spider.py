@@ -6,7 +6,7 @@ class ImagesSpider(scrapy.Spider):
     start_urls = ['http://localhost:8000/']
 
     def parse(self, response):
-        for image in response.css('div.gallery-item'):
+        for image in response.css('div.image-card'):
 
             item = ImageScraperItem()
             item['category'] = image.css('p::text').get() 

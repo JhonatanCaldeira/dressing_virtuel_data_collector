@@ -3,21 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galeria de Imagens</title>
+    <title>Original Image Gallery</title>
     <style>
         .gallery {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
         }
-        .gallery-item {
+        .image-card {
             width: 200px;
+            border: 1px solid #ccc;
+            padding: 10px;
             text-align: center;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease-in-out;
         }
-        .gallery-item img {
-            width: 100%;
+        .image-card:hover {
+            transform: scale(1.05);
+        }
+        .image-card img {
+            max-width: 100%;
             height: auto;
             border-radius: 8px;
+        }
+        .image-card p {
+            margin: 10px 0 5px;
+            font-size: 14px;
+            color: #555;
         }
         .pagination {
             margin-top: 20px;
@@ -25,20 +38,28 @@
         }
         .pagination a, .pagination span {
             margin: 0 5px;
+            padding: 8px 16px;
             text-decoration: none;
             color: #007BFF;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .pagination a:hover {
+            background-color: #f0f0f0;
         }
         .pagination .current {
+            background-color: #007BFF;
+            color: white;
             font-weight: bold;
-            color: #000;
         }
     </style>
 </head>
 <body>
-    <h1>Galeria de Imagens</h1>
+    <h1>Original Image Gallery</h1>
     <div class="gallery">
         {% for image in page_obj %}
-            <div class="gallery-item">
+            <div class="image-card">
                 <img src="{{ image.image.url }}" alt="{{ image.category }}">
                 <p>{{ image.category }}</p>
             </div>
@@ -47,17 +68,21 @@
 
     <div class="pagination">
         {% if page_obj.has_previous %}
-            <a href="?page=1">&laquo; Primeiro</a>
-            <a href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+            <a href="?page=1">&laquo; First</a>
+            <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
         {% endif %}
 
-        <span class="current">
-            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
-        </span>
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <span class="current">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
 
         {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">Próxima</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}">Último &raquo;</a>
+            <a href="?page={{ page_obj.next_page_number }}">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
         {% endif %}
     </div>
 </body>
