@@ -158,3 +158,6 @@ class ImageProductDetailed(BaseModel):
 class ImageClassification(BaseModel):
     path: str
     list_of_categories: list[str] = []
+
+class ImageSegmentation(BaseModel):
+    path: str

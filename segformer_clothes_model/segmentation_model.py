@@ -1,15 +1,20 @@
 from transformers import SegformerImageProcessor, AutoModelForSemanticSegmentation
+from schemas import schema
 from PIL import Image
 import torch.nn as nn
 import torch
 import numpy as np
 import base64
 import io
-
+import time
+import random
+import string
+import os
 
 MODEL = "sayeed99/segformer_b3_clothes"
+TMP_DIRECOTY = '/home/jcaldeira/dressing_virtuel_data_collector/media/tmp/'
 VALID_LABELS = [4, 5, 6, 7]
-
+"""
 # Class ID: 0, Class Name: Background
 # Class ID: 1, Class Name: Hat
 # Class ID: 2, Class Name: Hair
@@ -28,13 +33,26 @@ VALID_LABELS = [4, 5, 6, 7]
 # Class ID: 15, Class Name: Right-arm
 # Class ID: 16, Class Name: Bag
 # Class ID: 17, Class Name: Scarf
+# """
 
-def clothes_segmentation(image_to_segment):
+def generate_image_name(extension="png"):
+    # Get the current timestamp
+    timestamp = int(time.time())
+    
+    # Generate a random string of 6 characters
+    random_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    
+    # Combine timestamp and random string to create the image name
+    image_name = f"image_{timestamp}_{random_str}.{extension}"
+    
+    return image_name
+
+def clothes_segmentation(image_path):
     """
     Segments clothing from a given image using a pre-trained semantic segmentation model.
 
     Args:
-        image_to_segment (str): The file path to the image that will be segmented.
+        image_path (str): The file path to the image that will be segmented.
 
     Returns:
         Tuple[torch.Tensor, AutoModelForSemanticSegmentation]: 
@@ -50,7 +68,7 @@ def clothes_segmentation(image_to_segment):
     model.to(device)  # Move the model to the selected device
 
     # Open and preprocess the image for the model
-    image = Image.open(image_to_segment)
+    image = Image.open(image_path)
     inputs = processor(images=image, return_tensors="pt")
 
     # Move inputs to the same device as the model
@@ -73,7 +91,7 @@ def clothes_segmentation(image_to_segment):
 
     return upsampled_logits
 
-def crop_clothes_from_fullbody(image_to_segment):
+def crop_clothes_from_fullbody(image_to_segment: schema.ImageSegmentation):
     """
     Segments clothing from a full-body image and crops out the 
     detected clothing items.
@@ -90,7 +108,7 @@ def crop_clothes_from_fullbody(image_to_segment):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Perform segmentation on the input image, returning logits 
-    upsampled_logits = clothes_segmentation(image_to_segment)
+    upsampled_logits = clothes_segmentation(image_to_segment.path)
     upsampled_logits = upsampled_logits.to(device)
 
     # Obtain the segmentation map by applying argmax to the logits
@@ -107,8 +125,8 @@ def crop_clothes_from_fullbody(image_to_segment):
     unique_labels = np.unique(pred_seg[certainty_mask_np]) 
 
     # Open the original image
-    image = Image.open(image_to_segment)    
-    base64_images = []
+    image = Image.open(image_to_segment.path)    
+    return_images = []
 
     for label in unique_labels:
         # Skip labels that are not in the valid_labels list
@@ -128,20 +146,16 @@ def crop_clothes_from_fullbody(image_to_segment):
 
         # Crop the original image using the calculated bounding box limits
         cropped_image = image.crop((min_x, min_y, max_x, max_y))
+        cropped_image_path = os.path.join(TMP_DIRECOTY, 
+                                        generate_image_name())
+        cropped_image.save(cropped_image_path)
 
-        # Convert imagem to bytes
-        buffered = io.BytesIO()
-        cropped_image.save(buffered, format="PNG") 
-        img_bytes = buffered.getvalue()
-
-        # Bytes to a Base64 image
-        img_base64 = base64.b64encode(img_bytes).decode('utf-8')
-        base64_images.append(img_base64)
+        return_images.append(cropped_image_path)
 
     image.close()
-    return base64_images 
+    return return_images 
 
-def crop_clothes(image_to_segment):
+def crop_clothes(image_to_segment: schema.ImageSegmentation):
     """
     Segments clothing from a single clothe image and crops out the 
     detected clothing.
@@ -153,7 +167,7 @@ def crop_clothes(image_to_segment):
     Returns:
         Base64 Image: Retrun the cropped image in base64.
     """
-    upsampled_logits = clothes_segmentation(image_to_segment)
+    upsampled_logits = clothes_segmentation(image_to_segment.path)
 
     # Get the segmentation map
     pred_seg = upsampled_logits.argmax(dim=1)[0].cpu().numpy()
@@ -173,7 +187,7 @@ def crop_clothes(image_to_segment):
     binary_mask = (pred_seg == target_class).astype(np.uint8)
 
     # Create a blank (transparent) image with the same size as the original image
-    image = Image.open(image_to_segment)
+    image = Image.open(image_to_segment.path)
     cropped_image = Image.new("RGBA", image.size)
 
     # Apply the mask to the original image
@@ -187,17 +201,16 @@ def crop_clothes(image_to_segment):
     min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
     cropped_image = cropped_image.crop((min_x, min_y, max_x, max_y))
 
-    # Convert imagem to bytes
-    buffered = io.BytesIO()
-    cropped_image.save(buffered, format="PNG") 
-    img_bytes = buffered.getvalue()
-
-    # Bytes to a Base64 image
-    img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+    cropped_image_path = os.path.join(TMP_DIRECOTY, 
+                                    generate_image_name())
+    cropped_image.save(cropped_image_path)
 
     image.close()
-    return img_base64
+    
+    return_images = []
+    return_images.append(cropped_image_path)
 
+    return return_images
 
 if __name__ == "__main__":
     clothes_segmentation('segformer_clothes_model/images/100_0519.JPG')
