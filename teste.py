@@ -8,4 +8,4 @@ from schemas import schema
 db = SessionLocal()
 
 
-print(crud.get_images_and_categories(db, skip=0, limit=1))
+#print(crud.get_images_and_categories(db, skip=0, limit=1))

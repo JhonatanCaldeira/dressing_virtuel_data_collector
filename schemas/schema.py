@@ -154,3 +154,7 @@ class ImageProductDetailed(BaseModel):
     usage_type: str
     class Config:
         orm_mode = True
+    
+class ImageClassification(BaseModel):
+    path: str
+    list_of_categories: list[str] = []

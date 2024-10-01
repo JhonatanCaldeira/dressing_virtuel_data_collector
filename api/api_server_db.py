@@ -4,6 +4,30 @@ from database.database import SessionLocal, engine
 from database import crud
 from models import model
 from schemas import schema
+import uvicorn
+import yaml
+
+def load_config(filepath='config/config.yaml'):
+    """
+    Loads the webservice configuration from a YAML file.
+
+    Args:
+        filepath (str): Path to the YAML configuration file.
+
+    Returns:
+        dict: A dictionary containing the database configuration.
+    """
+    with open(filepath, 'r') as file:
+        config = yaml.safe_load(file)
+    return config['webservice_server_postgre']
+
+# Load database configuration from the YAML file
+ws_config = load_config()
+
+# Prefix used for routing in the application
+# PREFIX = 'dressing_virtuel'
+PREFIX = ws_config['prefix']
+PORT = ws_config['port']
 
 # Initialize the FastAPI app
 app = FastAPI()
@@ -19,9 +43,6 @@ def get_db():
         yield db
     finally:
         db.close() # Ensure the session is closed after use
-
-# Prefix used for routing in the application
-PREFIX = 'dressing_virtuel'
 
 @app.get("/")
 async def root():
@@ -151,3 +172,6 @@ def get_all_images(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     """
     images = crud.get_images(db, skip=skip, limit=limit)
     return images
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
