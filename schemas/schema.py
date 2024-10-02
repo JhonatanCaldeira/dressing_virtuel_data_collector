@@ -159,5 +159,9 @@ class ImageClassification(BaseModel):
     path: str
     list_of_categories: list[str] = []
 
+class ImageClassificationDict(BaseModel):
+    path: str
+    dict_of_categories: dict = {}
+
 class ImageSegmentation(BaseModel):
     path: str

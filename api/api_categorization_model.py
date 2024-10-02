@@ -35,7 +35,12 @@ async def root():
 
 @app.get(f"/{PREFIX}/fit_category", response_model=str)
 def get_category_from_image(image_to_classify: schema.ImageClassification):
-    category = categorization_model.clip_evaluation(image_to_classify)
+    category = categorization_model.image_classification_from_list(image_to_classify)
+    return category
+
+@app.get(f"/{PREFIX}/fit_categories", response_model=dict)
+def get_categories_from_image(image_to_classify: schema.ImageClassificationDict):
+    category = categorization_model.image_classification_from_dict(image_to_classify)
     return category
 
 # if __name__ == "__main__":

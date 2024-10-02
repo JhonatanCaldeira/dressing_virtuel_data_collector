@@ -101,7 +101,7 @@ def crop_clothes_from_fullbody(image_to_segment: schema.ImageSegmentation):
         image that will be segmented.
 
     Returns:
-        Base64 Image[]: Retrun a list of images in base64.
+        List[str]: Return a list of paths to the temporary images.
     """
     
     # Set the device to GPU if available, otherwise use CPU
@@ -125,34 +125,34 @@ def crop_clothes_from_fullbody(image_to_segment: schema.ImageSegmentation):
     unique_labels = np.unique(pred_seg[certainty_mask_np]) 
 
     # Open the original image
-    image = Image.open(image_to_segment.path)    
     return_images = []
+    with open(image_to_segment.path, 'rb') as path:
+        image = Image.open(path)    
 
-    for label in unique_labels:
-        # Skip labels that are not in the valid_labels list
-        if label not in VALID_LABELS:
-            continue
-        
-        # Convert the segmentation map to a binary mask for the target class
-        target_class = label  # Define the class to be extracted
-        binary_mask = (pred_seg == target_class).astype(np.uint8)
+        for label in unique_labels:
+            # Skip labels that are not in the valid_labels list
+            if label not in VALID_LABELS:
+                continue
+            
+            # Convert the segmentation map to a binary mask for the target class
+            target_class = label  # Define the class to be extracted
+            binary_mask = (pred_seg == target_class).astype(np.uint8)
 
-        # Find the bounding box of the target segment using non-zero indices of the binary mask
-        non_zero_indices = np.nonzero(binary_mask)
-        
-        # Calculate the bounding box limits (min and max coordinates)
-        min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
-        min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
+            # Find the bounding box of the target segment using non-zero indices of the binary mask
+            non_zero_indices = np.nonzero(binary_mask)
+            
+            # Calculate the bounding box limits (min and max coordinates)
+            min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
+            min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
 
-        # Crop the original image using the calculated bounding box limits
-        cropped_image = image.crop((min_x, min_y, max_x, max_y))
-        cropped_image_path = os.path.join(TMP_DIRECOTY, 
-                                        generate_image_name())
-        cropped_image.save(cropped_image_path)
+            # Crop the original image using the calculated bounding box limits
+            cropped_image = image.crop((min_x, min_y, max_x, max_y))
+            cropped_image_path = os.path.join(TMP_DIRECOTY, 
+                                            generate_image_name())
+            
+            cropped_image.save(cropped_image_path)
+            return_images.append(cropped_image_path)
 
-        return_images.append(cropped_image_path)
-
-    image.close()
     return return_images 
 
 def crop_clothes(image_to_segment: schema.ImageSegmentation):
@@ -165,7 +165,7 @@ def crop_clothes(image_to_segment: schema.ImageSegmentation):
         image that will be segmented.
 
     Returns:
-        Base64 Image: Retrun the cropped image in base64.
+        List[str]: Return a list of paths to the temporary images.
     """
     upsampled_logits = clothes_segmentation(image_to_segment.path)
 
@@ -186,27 +186,26 @@ def crop_clothes(image_to_segment: schema.ImageSegmentation):
     target_class = max_label
     binary_mask = (pred_seg == target_class).astype(np.uint8)
 
-    # Create a blank (transparent) image with the same size as the original image
-    image = Image.open(image_to_segment.path)
-    cropped_image = Image.new("RGBA", image.size)
+    with open(image_to_segment.path, 'rb') as path:
+        # Create a blank (transparent) image with the same size as the original image
+        image = Image.open(path)
+        cropped_image = Image.new("RGBA", image.size)
 
-    # Apply the mask to the original image
-    cropped_image = Image.composite(image.convert("RGBA"), 
-                                    cropped_image, 
-                                    Image.fromarray(binary_mask * 255))
+        # Apply the mask to the original image
+        cropped_image = Image.composite(image.convert("RGBA"), 
+                                        cropped_image, 
+                                        Image.fromarray(binary_mask * 255))
 
-    # Crop the image to remove excess transparent borders
-    non_zero_indices = np.nonzero(binary_mask)
-    min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
-    min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
-    cropped_image = cropped_image.crop((min_x, min_y, max_x, max_y))
+        # Crop the image to remove excess transparent borders
+        non_zero_indices = np.nonzero(binary_mask)
+        min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
+        min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
+        cropped_image = cropped_image.crop((min_x, min_y, max_x, max_y))
 
-    cropped_image_path = os.path.join(TMP_DIRECOTY, 
-                                    generate_image_name())
-    cropped_image.save(cropped_image_path)
+        cropped_image_path = os.path.join(TMP_DIRECOTY, 
+                                        generate_image_name())
+        cropped_image.save(cropped_image_path)
 
-    image.close()
-    
     return_images = []
     return_images.append(cropped_image_path)
 
