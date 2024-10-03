@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException
+from classification import classification_model
 from schemas import schema
-from clip_model import categorization_model
 import yaml
 import uvicorn
 import os
@@ -17,14 +17,17 @@ def load_config(filepath='config/config.yaml'):
     """
     with open(filepath, 'r') as file:
         config = yaml.safe_load(file)
-    return config['webservice_categorization']
+    return config['webservice_categorization'], config['classification_model']
 
 # Load database configuration from the YAML file
-ws_config = load_config()
+ws_config, model_config = load_config()
 PREFIX = ws_config['prefix']
 # PORT = ws_config['port']
+MODEL = model_config['model_name']
 
 app = FastAPI()
+
+classification = classification_model.ClassificationModel(MODEL)
 
 @app.get("/")
 async def root():
@@ -35,12 +38,12 @@ async def root():
 
 @app.get(f"/{PREFIX}/fit_category", response_model=str)
 def get_category_from_image(image_to_classify: schema.ImageClassification):
-    category = categorization_model.image_classification_from_list(image_to_classify)
+    category = classification.image_classification_from_list(image_to_classify)
     return category
 
 @app.get(f"/{PREFIX}/fit_categories", response_model=dict)
 def get_categories_from_image(image_to_classify: schema.ImageClassificationDict):
-    category = categorization_model.image_classification_from_dict(image_to_classify)
+    category = classification.image_classification_from_dict(image_to_classify)
     return category
 
 # if __name__ == "__main__":
