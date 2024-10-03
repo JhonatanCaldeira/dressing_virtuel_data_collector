@@ -15,6 +15,7 @@ class SegmentationModel():
                  model_name: str, 
                  temp_dir: str,
                  valid_labels: list[int] = [4, 5, 6, 7]):
+        
         self.processor, self.model, self.device = self.load_model(model_name)
         self.set_valid_label(valid_labels)
         self.set_image_temporary_directory(temp_dir)
