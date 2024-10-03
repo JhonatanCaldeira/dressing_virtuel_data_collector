@@ -6,13 +6,24 @@ import torch
 class ClassificationModel():
 
     def __init__(self, model_name: str):
-        self.model, self.preprocess_train, self.preprocess_val, self.tokenizer = self.load_model(model_name)
+        (self.model, 
+         self.preprocess_train, 
+         self.preprocess_val, 
+         self.tokenizer, 
+         self.device) = self.load_model(model_name)
 
     def load_model(self, model_name: str):
-        model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(model_name)
+        #Load the Marqo/marqo-fashionCLIP model and preprocessors
+        (model, 
+         preprocess_train, 
+         preprocess_val) = open_clip.create_model_and_transforms(model_name)
         tokenizer = open_clip.get_tokenizer(model_name)
 
-        return model, preprocess_train, preprocess_val, tokenizer
+        # Set the device (GPU if available, otherwise CPU)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device) # Move the model to the selected device
+
+        return model, preprocess_train, preprocess_val, tokenizer, device
 
     def image_classification_from_list(self,
                                        image_to_classify: schema.ImageClassification):
@@ -21,27 +32,23 @@ class ClassificationModel():
         descriptions using CLIP.
 
         Args:
-            image_to_classify (schema.ImageClassification): The ImageClassification
-            schema object containing image details.
+            image_to_classify (schema.ImageClassification): 
+            The ImageClassification schema object containing image details.
 
 
         Returns:
             str: The subcategory that has the highest similarity score to the image.
         """
-    
-        print("Loading Model")
-        #Load the Marqo/marqo-fashionCLIP model and preprocessors
+
         model = self.model
-        preprocess_train = self.preprocess_train
         preprocess_val = self.preprocess_val
         tokenizer = self.tokenizer
-
-        # Set the device (GPU if available, otherwise CPU)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model.to(device) # Move the model to the selected device
+        device = self.device
 
         # Preprocess the text descriptions for each subcategory using the tokenizer
-        text_inputs = tokenizer([f"a photo of {c}" for c in image_to_classify.list_of_categories]).to(device)
+        text_inputs = tokenizer(
+            [f"a photo of {c}" for c in image_to_classify.list_of_categories]
+            ).to(device)
 
         # Open and preprocess the image
         with open(image_to_classify.path, 'rb') as path:
@@ -59,9 +66,12 @@ class ClassificationModel():
 
             # Calculate similarity between image and text features
             similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
-            values, indices = similarity[0].topk(1) # Get the top 1 matching subcategory
+            
+            # Get the top 1 matching subcategory
+            values, indices = similarity[0].topk(1) 
 
-        return image_to_classify.list_of_categories[indices[0]] # Return the best matching subcategory
+        # Return the best matching subcategory
+        return image_to_classify.list_of_categories[indices[0]] 
 
     def image_classification_from_dict(self,
                                        image_to_classify: schema.ImageClassificationDict):
@@ -77,16 +87,12 @@ class ClassificationModel():
             dict: Dict of subcategories that has the highest similarity score to the image.
         """
     
-        print("Loading Model")
-        #Load the Marqo/marqo-fashionCLIP model and preprocessors
+
         model = self.model
         preprocess_train = self.preprocess_train
         preprocess_val = self.preprocess_val
         tokenizer = self.tokenizer
-
-        # Set the device (GPU if available, otherwise CPU)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model.to(device) # Move the model to the selected device
+        device = self.device
 
         result_dict = {}
         for key, list_of_cat in image_to_classify.dict_of_categories.items():

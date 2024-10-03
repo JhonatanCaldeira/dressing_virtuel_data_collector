@@ -1,11 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException
 from segformer_clothes_model import segmentation_model
-from typing import Annotated
 from schemas import schema
 import yaml
-import uvicorn
-import os
-import base64
 
 def load_config(filepath='config/config.yaml'):
     """
@@ -19,14 +15,22 @@ def load_config(filepath='config/config.yaml'):
     """
     with open(filepath, 'r') as file:
         config = yaml.safe_load(file)
-    return config['webservice_segmentation']
+    return config['webservice_segmentation'], config['segmentation_model']
 
 # Load database configuration from the YAML file
-ws_config = load_config()
+ws_config, model_config = load_config()
+
 PREFIX = ws_config['prefix']
-# PORT = ws_config['port']
+MODEL = model_config['model_name']
+VALID_LABELS = model_config['valid_labels']
+TEMP_DIR = model_config['image_temporary_directory']
 
 app = FastAPI()
+
+segmentation = segmentation_model.SegmentationModel(
+                model_name=MODEL,
+                temp_dir=TEMP_DIR,
+                valid_labels=VALID_LABELS)
 
 @app.get("/")
 async def root():
@@ -37,12 +41,12 @@ async def root():
 
 @app.get(f"/{PREFIX}/crop_single_clothes", response_model=list[str])
 def crop_single_clothes(image_to_segmentation: schema.ImageSegmentation):
-    image = segmentation_model.crop_clothes(image_to_segmentation)
+    image = segmentation.crop_clothes(image_to_segmentation)
     return image
 
 @app.get(f"/{PREFIX}/crop_fullbody_clothes", response_model=list[str])
 def crop_fullbody_clothes(image_to_segmentation: schema.ImageSegmentation):
-    images = segmentation_model.crop_clothes_from_fullbody(image_to_segmentation)
+    images = segmentation.crop_clothes_from_fullbody(image_to_segmentation)
     return images
 
 # if __name__ == "__main__":

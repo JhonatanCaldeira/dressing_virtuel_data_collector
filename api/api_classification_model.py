@@ -21,8 +21,8 @@ def load_config(filepath='config/config.yaml'):
 
 # Load database configuration from the YAML file
 ws_config, model_config = load_config()
+
 PREFIX = ws_config['prefix']
-# PORT = ws_config['port']
 MODEL = model_config['model_name']
 
 app = FastAPI()
