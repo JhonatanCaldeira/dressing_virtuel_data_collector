@@ -1,10 +1,17 @@
-from fastapi import Depends, FastAPI, HTTPException, Security
-from segformer_clothes_model import segmentation_model
+from fastapi import Depends, FastAPI, HTTPException, Security, File, UploadFile, Response
 from fastapi.security.api_key import APIKey, APIKeyHeader
+from fastapi.responses import FileResponse
 from starlette.status import HTTP_403_FORBIDDEN
+import starlette
+from segformer_clothes_model import segmentation_model
 from schemas import schema
+from pathlib import Path
 import yaml
-
+import shutil
+import tempfile
+import io
+import zipfile
+import os
 
 def load_config(filepath='config/config.yaml'):
     """
@@ -47,6 +54,30 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
         raise HTTPException(
             status_code=HTTP_403_FORBIDDEN, detail="Could not validate API KEY"
         )
+    
+def zipfiles(filenames):
+    zip_filename = "archive.zip"
+
+    s = io.BytesIO()
+    zf = zipfile.ZipFile(s, "w")
+
+    for fpath in filenames:
+        # Calculate path for file in zip
+        fdir, fname = os.path.split(fpath)
+
+        # Add file, at correct path
+        zf.write(fpath, fname)
+
+    # Must close zip for all contents to be written
+    zf.close()
+
+    # Grab ZIP file from in-memory, make response with correct MIME-type
+    resp = Response(s.getvalue(), 
+                    media_type="application/x-zip-compressed", 
+                    headers={'Content-Disposition': f'attachment;filename={zip_filename}'
+        })
+
+    return resp
 
 @app.get("/")
 async def root():
@@ -55,17 +86,38 @@ async def root():
     """
     return {"message": "I'm alive!"}
 
-@app.post(f"/{PREFIX}/crop_single_clothes", response_model=list[str])
-def crop_single_clothes(image_to_segmentation: schema.ImageSegmentation,
+@app.post(f"/{PREFIX}/crop_single_clothes")
+def crop_single_clothes(image: UploadFile = File(...),
                         api_key: APIKey = Depends(get_api_key)):
-    image = segmentation.crop_clothes(image_to_segmentation)
-    return image
+    
+    # Create a temporary directory
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        temp_dir_path = Path(tmp_dir)
+        # Define the file path in the temporary directory
+        temp_image_path = temp_dir_path / image.filename
+        
+        # Save the uploaded file to the temporary directory
+        with open(temp_image_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+            
+        returned_images = segmentation.crop_clothes(str(temp_image_path))
+
+    return zipfiles(returned_images)
 
 @app.post(f"/{PREFIX}/crop_fullbody_clothes", response_model=list[str])
-def crop_fullbody_clothes(image_to_segmentation: schema.ImageSegmentation,
+def crop_fullbody_clothes(image: UploadFile= File(...),
                         api_key: APIKey = Depends(get_api_key)):
-    images = segmentation.crop_clothes_from_fullbody(image_to_segmentation)
-    return images
+    
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        temp_dir_path = Path(tmp_dir)
+        temp_image_path = temp_dir_path / image.filename
+
+        with open(temp_image_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        returned_images = segmentation.crop_clothes_from_fullbody(str(temp_image_path))
+        
+    return zipfiles(returned_images)
 
 # if __name__ == "__main__":
 #     uvicorn.run(app_categorization, host="0.0.0.0", port=PORT)

@@ -1,9 +1,14 @@
-from fastapi import Depends, FastAPI, HTTPException, Security
+from fastapi import Depends, FastAPI, HTTPException, Security, Form, File, UploadFile,Body
 from fastapi.security.api_key import APIKey, APIKeyHeader
 from starlette.status import HTTP_403_FORBIDDEN
+from typing import Annotated
 from classification import classification_model
 from schemas import schema
 import yaml
+import json
+import tempfile
+from pathlib import Path
+import shutil
 
 def load_config(filepath='config/config.yaml'):
     """
@@ -49,18 +54,27 @@ async def root():
     """
     return {"message": "I'm alive!"}
 
-@app.post(f"/{PREFIX}/fit_category", response_model=str)
-def get_category_from_image(
-                            image_to_classify: schema.ImageClassification,
-                            api_key: APIKey = Depends(get_api_key)):
-    category = classification.image_classification_from_list(image_to_classify)
-    return category
-
 @app.post(f"/{PREFIX}/fit_categories", response_model=dict)
 def get_categories_from_image(
-                            image_to_classify: schema.ImageClassificationDict,
+                            categories_dict: str = Form(...),
+                            image: UploadFile = File(...),
                             api_key: APIKey = Depends(get_api_key)):
-    category = classification.image_classification_from_dict(image_to_classify)
+    
+    try:
+        categories_dict = json.loads(categories_dict)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON format for dict_of_categories")
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        temp_dir_path = Path(tmp_dir)
+        temp_image_path = temp_dir_path / image.filename
+
+        with open(temp_image_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        category = classification.image_classification_from_dict(
+                                                categories_dict,
+                                                str(temp_image_path))
     return category
 
 # if __name__ == "__main__":

@@ -112,8 +112,7 @@ class SegmentationModel():
 
         return upsampled_logits
 
-    def crop_clothes_from_fullbody(self,
-                                   image_to_segment: schema.ImageSegmentation):
+    def crop_clothes_from_fullbody(self, image_to_segment: str):
         """
         Segments clothing from a full-body image and crops out the 
         detected clothing items.
@@ -128,9 +127,9 @@ class SegmentationModel():
         
         # Set the device to GPU if available, otherwise use CPU
         device = self.device
-
+        
         # Perform segmentation on the input image, returning logits 
-        upsampled_logits = self.clothes_segmentation(image_to_segment.path)
+        upsampled_logits = self.clothes_segmentation(image_to_segment)
         upsampled_logits = upsampled_logits.to(device)
 
         # Obtain the segmentation map by applying argmax to the logits
@@ -148,7 +147,7 @@ class SegmentationModel():
 
         # Open the original image
         return_images = []
-        with open(image_to_segment.path, 'rb') as path:
+        with open(image_to_segment, 'rb') as path:
             image = Image.open(path)    
 
             for label in unique_labels:
@@ -177,8 +176,7 @@ class SegmentationModel():
 
         return return_images 
 
-    def crop_clothes(self,
-                     image_to_segment: schema.ImageSegmentation):
+    def crop_clothes(self, image_to_segment: str):
         """
         Segments clothing from a single clothe image and crops out the 
         detected clothing.
@@ -190,7 +188,7 @@ class SegmentationModel():
         Returns:
             List[str]: Return a list of paths to the temporary images.
         """
-        upsampled_logits = self.clothes_segmentation(image_to_segment.path)
+        upsampled_logits = self.clothes_segmentation(image_to_segment)
 
         # Get the segmentation map
         pred_seg = upsampled_logits.argmax(dim=1)[0].cpu().numpy()
@@ -209,7 +207,7 @@ class SegmentationModel():
         target_class = max_label
         binary_mask = (pred_seg == target_class).astype(np.uint8)
 
-        with open(image_to_segment.path, 'rb') as path:
+        with open(image_to_segment, 'rb') as path:
             # Create a blank (transparent) image with the same size as the original image
             image = Image.open(path)
             cropped_image = Image.new("RGBA", image.size)

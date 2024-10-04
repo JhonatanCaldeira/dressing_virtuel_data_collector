@@ -166,3 +166,4 @@ media/
 images/
 config/
 tmp/
+offline_model/

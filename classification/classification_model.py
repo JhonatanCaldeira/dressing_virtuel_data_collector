@@ -17,6 +17,7 @@ class ClassificationModel():
         (model, 
          preprocess_train, 
          preprocess_val) = open_clip.create_model_and_transforms(model_name)
+        
         tokenizer = open_clip.get_tokenizer(model_name)
 
         # Set the device (GPU if available, otherwise CPU)
@@ -25,56 +26,9 @@ class ClassificationModel():
 
         return model, preprocess_train, preprocess_val, tokenizer, device
 
-    def image_classification_from_list(self,
-                                       image_to_classify: schema.ImageClassification):
-        """
-        Evaluates the similarity between an image and a list of subcategory 
-        descriptions using CLIP.
-
-        Args:
-            image_to_classify (schema.ImageClassification): 
-            The ImageClassification schema object containing image details.
-
-
-        Returns:
-            str: The subcategory that has the highest similarity score to the image.
-        """
-
-        model = self.model
-        preprocess_val = self.preprocess_val
-        tokenizer = self.tokenizer
-        device = self.device
-
-        # Preprocess the text descriptions for each subcategory using the tokenizer
-        text_inputs = tokenizer(
-            [f"a photo of {c}" for c in image_to_classify.list_of_categories]
-            ).to(device)
-
-        # Open and preprocess the image
-        with open(image_to_classify.path, 'rb') as path:
-            image = Image.open(path)
-            image_input = preprocess_val(image).unsqueeze(0).to(device)
-
-            # Calculate image and text features
-            with torch.no_grad():
-                image_features = model.encode_image(image_input)
-                text_features = model.encode_text(text_inputs)
-
-            # Normalize the features
-            image_features /= image_features.norm(dim=-1, keepdim=True)
-            text_features /= text_features.norm(dim=-1, keepdim=True)
-
-            # Calculate similarity between image and text features
-            similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
-            
-            # Get the top 1 matching subcategory
-            values, indices = similarity[0].topk(1) 
-
-        # Return the best matching subcategory
-        return image_to_classify.list_of_categories[indices[0]] 
-
     def image_classification_from_dict(self,
-                                       image_to_classify: schema.ImageClassificationDict):
+                                       dict_of_categories: dict,
+                                       image_to_classify: str):
         """
         Evaluates the similarity between an image and a dict of subcategory 
         descriptions using CLIP.
@@ -86,22 +40,19 @@ class ClassificationModel():
         Returns:
             dict: Dict of subcategories that has the highest similarity score to the image.
         """
-    
-
         model = self.model
-        preprocess_train = self.preprocess_train
         preprocess_val = self.preprocess_val
         tokenizer = self.tokenizer
         device = self.device
 
         result_dict = {}
-        for key, list_of_cat in image_to_classify.dict_of_categories.items():
+        for key, list_of_cat in dict_of_categories.items():
             # Preprocess the text descriptions for each subcategory using the tokenizer
             text_inputs = tokenizer([f"a photo of {c}" for c in 
                                     list_of_cat]).to(device)
 
             # Open and preprocess the image
-            with open(image_to_classify.path, 'rb') as path:
+            with open(image_to_classify, 'rb') as path:
                 image = Image.open(path)
                 image_input = preprocess_val(image).unsqueeze(0).to(device)
 
@@ -118,6 +69,6 @@ class ClassificationModel():
             similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
             values, indices = similarity[0].topk(1) # Get the top 1 matching subcategory
 
-            result_dict[key] = image_to_classify.dict_of_categories[key][indices[0]]
+            result_dict[key] = dict_of_categories[key][indices[0]]
                 
         return result_dict # Return the best matching subcategory
