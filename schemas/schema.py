@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 
-
 class Color(BaseModel):
     """
     Schema for representing color information.
@@ -164,3 +163,7 @@ class FormClassification(BaseModel):
 
 class ImageSegmentation(BaseModel):
     path: str
+
+class ImageDetection(BaseModel):
+    image_path: str
+    category_to_detect: str

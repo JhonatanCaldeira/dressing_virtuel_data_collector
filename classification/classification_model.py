@@ -69,6 +69,6 @@ class ClassificationModel():
             similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
             values, indices = similarity[0].topk(1) # Get the top 1 matching subcategory
 
-            result_dict[key] = dict_of_categories[key][indices[0]]
+            result_dict[key] = dict_of_categories[key][indices[0].item()]
                 
         return result_dict # Return the best matching subcategory
