@@ -167,3 +167,4 @@ images/
 config/
 tmp/
 offline_model/
+logs/

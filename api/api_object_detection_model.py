@@ -95,8 +95,8 @@ def crop_object_image(image: UploadFile = File(...),
         with open(temp_image_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
 
-        returned_images = object_detection.detection(
-                                        str(temp_image_path),
-                                        category_to_detect)
+            returned_images = object_detection.detection(
+                                            str(temp_image_path),
+                                            category_to_detect)
         
     return zipfiles(returned_images)
