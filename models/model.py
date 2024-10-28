@@ -103,6 +103,14 @@ class ArticleType(Base):
     id_subcategory = Column(Integer, ForeignKey("tb_productsubcategories.id"))
     sub_category = relationship("SubCategory")
 
+class Client(Base):
+    __tablename__ = 'tb_client'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255))
+    password = Column(String(255))
+    face_id = Column(String(1000))
+
 class ImageProduct(Base):
     """
     Model for storing image product information.
@@ -140,3 +148,6 @@ class ImageProduct(Base):
 
     id_articletype= Column(Integer, ForeignKey("tb_articletype.id"))
     article_type = relationship("ArticleType")
+
+    id_client= Column(Integer, ForeignKey("tb_client.id"))
+    client = relationship("Client")

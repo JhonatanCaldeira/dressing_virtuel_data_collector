@@ -167,3 +167,19 @@ class ImageSegmentation(BaseModel):
 class ImageDetection(BaseModel):
     image_path: str
     category_to_detect: str
+
+class CreateClient(BaseModel):
+    email: str
+    password: str
+
+class CreateClientResp(BaseModel):
+    status: int
+    message: str
+
+class ClientAuth(BaseModel):
+    email: str
+    password: str
+
+class ClientAuthResp(BaseModel):
+    id: int
+    email: str

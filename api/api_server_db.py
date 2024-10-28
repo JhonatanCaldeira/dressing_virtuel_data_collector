@@ -142,7 +142,7 @@ def get_article_types(skip: int = 0, limit: int = 100, db: Session = Depends(get
     return colors
 
 @app.post(f"/{PREFIX}/import_image/", response_model=schema.ImageProduct)
-def create_image_product( image:schema.ImageProduct, db: Session = Depends(get_db)):
+def create_image_product(image:schema.ImageProduct, db: Session = Depends(get_db)):
     """
     Create a new image product entry in the database.
     
@@ -173,5 +173,33 @@ def get_all_images(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     images = crud.get_images(db, skip=skip, limit=limit)
     return images
 
+@app.post(f"/{PREFIX}/create_client/", response_model=schema.CreateClientResp)
+def create_client(client: schema.CreateClient, db: Session = Depends(get_db)):
+    """
+    Create a new client entry in the database.
+    
+    - If the email already exists, raises an HTTP 400 error.
+    - Returns the created id.
+    """
+    client_email = crud.get_email(db, client.email)
+    if client_email:
+        raise HTTPException(status_code=400, detail="Email already registred.")
+    
+    db_client = crud.create_client(db, client=client)
+    if db_client:
+        return {"status":1, "message":'User created successfully'}
+    
+    return {"status":0, "message":'Error in the user creation'}
+
+@app.get(f"/{PREFIX}/authentication/", response_model=schema.ClientAuthResp)
+def authentication(email: str, password: str, db: Session = Depends(get_db)):
+
+    client_auth = crud.client_authentication(db, email, password)
+
+    if not client_auth:
+        raise HTTPException(status_code=400, detail="Invalid user or password.")
+    
+    return {"id":client_auth.id, "email":client_auth.email}
+    
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=PORT)

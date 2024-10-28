@@ -1,6 +1,13 @@
 from sqlalchemy.orm import Session
-from models.model import ArticleType,Category,Color,Gender,Season,SubCategory,UsageType, ImageProduct
+from models.model import ArticleType,Category,Color,Gender,Season,SubCategory,UsageType,ImageProduct,Client
 from schemas import schema
+import bcrypt
+
+def hash_password(password):
+    """Hashes a password using bcrypt."""
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed_password.decode('utf-8')
 
 def get_color(db: Session, name: str):
     """
@@ -305,3 +312,24 @@ def create_image_product(db: Session, image: schema.ImageProduct):
     db.commit()
     db.refresh(db_image)
     return db_image
+
+def get_email(db: Session, email: str):
+    return db.query(Client).filter(Client.email == email).first()
+
+def create_client(db: Session, client = schema.CreateClient):
+    db_client = Client(email=client.email,
+                       password=hash_password(client.password))
+    db.add(db_client)
+    db.commit()
+    db.refresh(db_client)
+    return db_client
+
+def client_authentication(db: Session, email:str, password:str):
+    
+    db_client = db.query(Client).filter(Client.email == email).first()
+
+    if bcrypt.checkpw(password.encode('utf-8'), 
+                      db_client.password.encode('utf-8')):
+        return db_client
+    
+    return False
