@@ -333,3 +333,21 @@ def client_authentication(db: Session, email:str, password:str):
         return db_client
     
     return False
+
+def update_faceid(db: Session, id_client: int, faceid: str):
+    db_client = db.query(Client).filter(Client.id == id_client).first()
+    if not db_client:
+        return False
+    
+    db_client.face_id = faceid
+    db.commit()
+    db.refresh(db_client)
+
+    return True
+
+def get_faceid(db: Session, id_client: int):
+    db_client = db.query(Client.face_id).filter(Client.id == id_client).first()
+    if not db_client:
+        return False
+    
+    return db_client[0]

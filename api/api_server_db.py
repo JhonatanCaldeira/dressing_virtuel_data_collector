@@ -1,4 +1,9 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Security, UploadFile, File, Form
+from fastapi.security.api_key import APIKey, APIKeyHeader
+from starlette.status import HTTP_403_FORBIDDEN
+from fastapi.responses import StreamingResponse
+from typing import Annotated
+
 from sqlalchemy.orm import Session
 from database.database import SessionLocal, engine
 from database import crud
@@ -6,6 +11,9 @@ from models import model
 from schemas import schema
 import uvicorn
 import yaml
+import io
+import base64
+
 
 def load_config(filepath='config/config.yaml'):
     """
@@ -28,9 +36,20 @@ ws_config = load_config()
 # PREFIX = 'dressing_virtuel'
 PREFIX = ws_config['prefix']
 PORT = ws_config['port']
+API_KEY = ws_config['API_KEY']
 
 # Initialize the FastAPI app
 app = FastAPI()
+
+api_key_header = APIKeyHeader(name="access_token", auto_error=False)
+
+async def get_api_key(api_key_header: str = Security(api_key_header)):
+    if api_key_header == API_KEY:
+        return api_key_header   
+    else:
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN, detail="Could not validate API KEY"
+        )
 
 # Dependency to get a database session for each request
 def get_db():
@@ -52,7 +71,9 @@ async def root():
     return {"message": "I'm alive!"}
 
 @app.post(f"/{PREFIX}/colors/", response_model=schema.Color)
-def create_color(color: schema.Color, db: Session = Depends(get_db)):
+def create_color(color: schema.Color, 
+                 db: Session = Depends(get_db),
+                 api_key: APIKey = Depends(get_api_key)):
     """
     Create a new color entry in the database.
     
@@ -65,7 +86,9 @@ def create_color(color: schema.Color, db: Session = Depends(get_db)):
     return crud.create_color(db, color=color)
 
 @app.get(f"/{PREFIX}/colors/", response_model=list[schema.Color])
-def get_colors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_colors(skip: int = 0, limit: int = 100, 
+               db: Session = Depends(get_db),
+               api_key: APIKey = Depends(get_api_key)):
     """
     Retrieve a list of colors from the database.
     
@@ -76,7 +99,9 @@ def get_colors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return colors
 
 @app.get(f"/{PREFIX}/seasons/", response_model=list[schema.Season])
-def get_season(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_season(skip: int = 0, limit: int = 100, 
+               db: Session = Depends(get_db),
+               api_key: APIKey = Depends(get_api_key)):
     """
     Retrieve a list of seasons from the database.
     
@@ -87,7 +112,9 @@ def get_season(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return seasons
 
 @app.get(f"/{PREFIX}/genders/", response_model=list[schema.Gender])
-def get_genders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_genders(skip: int = 0, limit: int = 100, 
+                db: Session = Depends(get_db),
+               api_key: APIKey = Depends(get_api_key)):
     """
     Retrieve a list of genders from the database.
     
@@ -98,7 +125,9 @@ def get_genders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return genders
 
 @app.get(f"/{PREFIX}/usage_types/", response_model=list[schema.UsageType])
-def get_usage_types(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_usage_types(skip: int = 0, limit: int = 100, 
+                    db: Session = Depends(get_db),
+                    api_key: APIKey = Depends(get_api_key)):
     """
     Retrieve a list of usage types from the database.
     
@@ -109,7 +138,9 @@ def get_usage_types(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
     return usage
 
 @app.get(f"/{PREFIX}/categories/", response_model=list[schema.Category])
-def get_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_categories(skip: int = 0, limit: int = 100, 
+                   db: Session = Depends(get_db),
+                   api_key: APIKey = Depends(get_api_key)):
     """
     Retrieve a list of categories from the database.
     
@@ -120,7 +151,9 @@ def get_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     return categories
 
 @app.get(f"/{PREFIX}/subcategories/", response_model=list[schema.SubCategory])
-def get_subcategoriess(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_subcategoriess(skip: int = 0, limit: int = 100, 
+                       db: Session = Depends(get_db),
+                       api_key: APIKey = Depends(get_api_key)):
     """
     Retrieve a list of subcategories from the database.
     
@@ -131,7 +164,9 @@ def get_subcategoriess(skip: int = 0, limit: int = 100, db: Session = Depends(ge
     return colors
 
 @app.get(f"/{PREFIX}/article_types/", response_model=list[schema.ArticleType])
-def get_article_types(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_article_types(skip: int = 0, limit: int = 100, 
+                      db: Session = Depends(get_db),
+                      api_key: APIKey = Depends(get_api_key)):
     """
     Retrieve a list of article types from the database.
     
@@ -142,7 +177,9 @@ def get_article_types(skip: int = 0, limit: int = 100, db: Session = Depends(get
     return colors
 
 @app.post(f"/{PREFIX}/import_image/", response_model=schema.ImageProduct)
-def create_image_product(image:schema.ImageProduct, db: Session = Depends(get_db)):
+def create_image_product(image:schema.ImageProduct, 
+                         db: Session = Depends(get_db),
+                         api_key: APIKey = Depends(get_api_key)):
     """
     Create a new image product entry in the database.
     
@@ -152,7 +189,9 @@ def create_image_product(image:schema.ImageProduct, db: Session = Depends(get_db
     return db_image
 
 @app.get(f"/{PREFIX}/images_categories/", response_model=list[schema.ImageProductDetailed])
-def get_all_images(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_all_images(skip: int = 0, limit: int = 100, 
+                   db: Session = Depends(get_db),
+                   api_key: APIKey = Depends(get_api_key)):
     """
     Retrieve a list of all images along with their categories from the database.
     
@@ -163,7 +202,9 @@ def get_all_images(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     return images
 
 @app.get(f"/{PREFIX}/images/", response_model=list[schema.ImageProduct])
-def get_all_images(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_all_images(skip: int = 0, limit: int = 100, 
+                   db: Session = Depends(get_db),
+                   api_key: APIKey = Depends(get_api_key)):
     """
     Retrieve a list of all images from the database.
     
@@ -174,7 +215,9 @@ def get_all_images(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     return images
 
 @app.post(f"/{PREFIX}/create_client/", response_model=schema.CreateClientResp)
-def create_client(client: schema.CreateClient, db: Session = Depends(get_db)):
+def create_client(client: schema.CreateClient, 
+                  db: Session = Depends(get_db),
+                  api_key: APIKey = Depends(get_api_key)):
     """
     Create a new client entry in the database.
     
@@ -192,7 +235,9 @@ def create_client(client: schema.CreateClient, db: Session = Depends(get_db)):
     return {"status":0, "message":'Error in the user creation'}
 
 @app.get(f"/{PREFIX}/authentication/", response_model=schema.ClientAuthResp)
-def authentication(email: str, password: str, db: Session = Depends(get_db)):
+def authentication(email: str, password: str, 
+                   db: Session = Depends(get_db),
+                   api_key: APIKey = Depends(get_api_key)):
 
     client_auth = crud.client_authentication(db, email, password)
 
@@ -200,6 +245,36 @@ def authentication(email: str, password: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid user or password.")
     
     return {"id":client_auth.id, "email":client_auth.email}
+
+@app.post(f"/{PREFIX}/upload_faceid/")
+def update_faceid(id_client: Annotated[int, Form()],
+                image: UploadFile = File(...),
+                db: Session = Depends(get_db),
+                api_key: APIKey = Depends(get_api_key)):
+    
+    image_bytes = image.file.read()
+    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+
+    if not crud.update_faceid(db, id_client, image_base64):
+        raise HTTPException(status_code=400, detail="Invalid Image.")
+    
+    return {"status":"success"}
+
+@app.get(f"/{PREFIX}/get_faceid")
+def get_faceid(id_client: int,
+               db: Session = Depends(get_db),
+               api_key: APIKey = Depends(get_api_key)):
+    
+    db_faceid = crud.get_faceid(db, id_client)
+    if not db_faceid:
+        raise HTTPException(status_code=404, detail="FaceId not found.")
+    
+    image_bytes = base64.b64decode(db_faceid)
+    image_stream = io.BytesIO(image_bytes)
+    
+    # Retorna a imagem como um StreamingResponse
+    return StreamingResponse(image_stream, media_type="image/jpeg")
+
     
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=PORT)
