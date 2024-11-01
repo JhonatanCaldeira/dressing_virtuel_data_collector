@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models.model import ArticleType, Category, Color, Gender, ImageProduct, Season, SubCategory, UsageType, Base
+from database.model import ArticleType, Category, Color, Gender, ImageProduct, Season, SubCategory, UsageType, Base
 from sqlalchemy_utils import database_exists, drop_database, create_database
 
 import yaml

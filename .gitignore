@@ -168,3 +168,4 @@ config/
 tmp/
 offline_model/
 logs/
+object_detection/model/
