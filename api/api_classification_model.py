@@ -56,9 +56,9 @@ def get_categories_from_image(
         with open(temp_image_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
 
-        category = classification.image_classification_from_dict(
-            categories_dict,
-            str(temp_image_path))
+            category = classification.image_classification_from_dict(
+                categories_dict,
+                str(temp_image_path))
         
 
     if category == {}:
