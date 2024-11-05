@@ -1,6 +1,14 @@
-from fastapi import Depends, FastAPI, HTTPException, Security, File, UploadFile, Response, Form
+from fastapi import (
+    Depends, 
+    FastAPI, 
+    HTTPException, 
+    Security, 
+    File, 
+    UploadFile, 
+    Response, 
+    Form
+)
 from fastapi.security.api_key import APIKey, APIKeyHeader
-from starlette.status import HTTP_403_FORBIDDEN, HTTP_204_NO_CONTENT
 from models.object_detection import object_detection_model
 from pathlib import Path
 import shutil
@@ -9,6 +17,7 @@ import io
 import zipfile
 import os
 import time
+import base64
 
 PREFIX = os.getenv("OBJ_DETECTION_API_ENDPOINT")
 API_KEY = os.getenv("OBJ_DETECTION_API_KEY")
@@ -25,13 +34,13 @@ app = FastAPI()
 
 api_key_header = APIKeyHeader(name="access_token", auto_error=False)
 
-
 async def get_api_key(api_key_header: str = Security(api_key_header)):
     if api_key_header == API_KEY:
         return api_key_header
     else:
         raise HTTPException(
-            status_code=HTTP_403_FORBIDDEN, detail="Could not validate API KEY"
+            status_code=403, 
+            detail="Could not validate API KEY"
         )
 
 
@@ -64,6 +73,11 @@ def zipfiles(filenames):
 
     return resp
 
+async def convert_image_to_base64(image: UploadFile) -> str:
+    image_bytes = await image.read()
+    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+    
+    return image_base64
 
 @app.get("/")
 async def root():
@@ -77,7 +91,7 @@ async def root():
 def crop_object_image(image: UploadFile = File(...),
                       category_to_detect: str = Form(...),
                       api_key: APIKey = Depends(get_api_key)):
-
+    
     with tempfile.TemporaryDirectory() as tmp_dir:
         temp_dir_path = Path(tmp_dir)
         temp_image_path = temp_dir_path / image.filename
@@ -91,8 +105,27 @@ def crop_object_image(image: UploadFile = File(...),
 
         if returned_images == []:
             raise HTTPException(
-                status_code=HTTP_204_NO_CONTENT,
+                status_code=204,
                 detail=f"Could find any {category_to_detect} in the image"
             )
 
     return zipfiles(returned_images)
+
+@app.post(f"/{PREFIX}/crop_detection_new")
+async def crop_object_image_new(image: UploadFile = File(...),
+                      category_to_detect: str = Form(...),
+                      api_key: APIKey = Depends(get_api_key)):
+    
+    image_base64 = await convert_image_to_base64(image)
+
+    returned_images = object_detection.detection_new(
+        image_base64,
+        category_to_detect)
+
+    if returned_images == {"images": []}:
+        raise HTTPException(
+            status_code=204,
+            detail=f"Could find any {category_to_detect} in the image"
+        )
+
+    return returned_images

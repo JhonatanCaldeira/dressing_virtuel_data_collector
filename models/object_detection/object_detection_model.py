@@ -1,10 +1,10 @@
 from transformers import DetrImageProcessor, DetrForObjectDetection
 from PIL import Image
 import torch
-import time
-import random
-import string
 import os
+import base64
+import io
+from utils import utils_image
 
 class ObjectDetection:
 
@@ -29,48 +29,33 @@ class ObjectDetection:
     def set_image_temporary_directory(self, temp_dir):
         self.__temp_dir = temp_dir
 
-    def generate_image_name(self, extension="png"):
-        # Get the current timestamp
-        timestamp = int(time.time())
-        
-        # Generate a random string of 6 characters
-        random_str = ''.join(random.choices(
-            string.ascii_lowercase + string.digits, k=6))
-        
-        # Combine timestamp and random string to create the image name
-        image_name = f"image_{timestamp}_{random_str}.{extension}"
-        
-        return image_name
-    
-    def detection(self, image_path: str, category_to_detect: str):
+    def detection(self, image_base64: str, category_to_detect: str):
         processor = self.processor
         model = self.model
         device = self.device
 
         return_images = []
 
-        with open(image_path, 'rb') as path:
-            image = Image.open(path)
+        image_buffer = utils_image.convert_base64_to_bytesIO(image_base64)
+        image = Image.open(image_buffer)
 
-            inputs = processor(images=image, return_tensors="pt")
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-            outputs = model(**inputs)
+        inputs = processor(images=image, return_tensors="pt")
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        outputs = model(**inputs)
 
-            # convert outputs (bounding boxes and class logits) to COCO API
-            # let's only keep detections with score > 0.9
-            target_sizes = torch.tensor([image.size[::-1]])
-            results = processor.post_process_object_detection(
-                outputs, target_sizes=target_sizes, threshold=0.9)[0]
+        # convert outputs (bounding boxes and class logits) to COCO API
+        # let's only keep detections with score > 0.9
+        target_sizes = torch.tensor([image.size[::-1]])
+        results = processor.post_process_object_detection(
+            outputs, target_sizes=target_sizes, threshold=0.9)[0]
 
-            for label, box in zip(results["labels"], results["boxes"]):
-                if model.config.id2label[label.item()] != category_to_detect:
-                    continue
-                box = [round(i, 2) for i in box.tolist()]
+        for label, box in zip(results["labels"], results["boxes"]):
+            if model.config.id2label[label.item()] != category_to_detect:
+                continue
+            box = [round(i, 2) for i in box.tolist()]
 
-                cropped_image = image.crop(box)
-                cropped_image_path = os.path.join(self.__temp_dir, 
-                                        self.generate_image_name())
-                cropped_image.save(cropped_image_path)
-                return_images.append(cropped_image_path)
+            cropped_image = image.crop(box)
+            return_images.append(utils_image.convert_pil_to_base64(cropped_image))
 
-        return return_images
+        response = {"images": return_images}
+        return response

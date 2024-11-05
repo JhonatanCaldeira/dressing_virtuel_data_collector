@@ -1,5 +1,5 @@
-from PIL import Image  # Import Image from PIL
-from schemas import schema
+from PIL import Image
+from utils import utils_image
 import open_clip
 import torch
 
@@ -51,10 +51,12 @@ class ClassificationModel():
             text_inputs = tokenizer([f"a photo of {c}" for c in 
                                     list_of_cat]).to(device)
 
-            # Open and preprocess the image
-            with open(image_to_classify, 'rb') as path:
-                image = Image.open(path)
-                image_input = preprocess_val(image).unsqueeze(0).to(device)
+            image_bytes = utils_image.convert_base64_to_bytesIO(image_to_classify)
+
+            image = Image.open(image_bytes)
+            if image.mode != "RGB":
+                image = image.convert("RBG")
+            image_input = preprocess_val(image).unsqueeze(0).to(device)
 
             # Calculate image and text features
             with torch.no_grad():
@@ -72,3 +74,4 @@ class ClassificationModel():
             result_dict[key] = dict_of_categories[key][indices[0].item()]
                 
         return result_dict # Return the best matching subcategory
+    

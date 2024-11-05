@@ -1,8 +1,8 @@
 from celery import Celery
 from PIL import Image
+from utils import utils_image
 import requests
 import json
-import mimetypes
 import io, zipfile
 import os
 import time
@@ -16,6 +16,7 @@ load_dotenv(dotenv_path="config/.env")
 IMAGE_TMP_DIR = os.getenv("IMAGE_TMP_DIR")
 BROKER_SERVER = os.getenv("BROKER_SERVER")
 
+#DB
 SERVER = os.getenv("PG_API_SERVER")
 PORT = os.getenv("PG_API_PORT")
 ENDPOINT = os.getenv("PG_API_ENDPONT")
@@ -23,37 +24,14 @@ ENDPOINT = os.getenv("PG_API_ENDPONT")
 PG_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
 PG_API_KEY = os.getenv("PG_API_KEY")
 
-#OBJECT DETECTION
-SERVER = os.getenv("OBJ_DETECTION_API_SERVER")
-PORT = os.getenv("OBJ_DETECTION_API_PORT")
-ENDPOINT = os.getenv("OBJ_DETECTION_API_ENDPOINT")
+#MODELs
+SERVER = os.getenv("MODELS_API_SERVER")
+PORT = os.getenv("MODELS_API_PORT")
+ENDPOINT = os.getenv("MODELS_API_ENDPOINT")
 
-OBJ_DETECTION_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
-OBJ_DETECTION_API_KEY = os.getenv("OBJ_DETECTION_API_KEY")
-
-#FACE RECOGINITION
-SERVER = os.getenv("FACE_RECOGNITION_API_SERVER")
-PORT = os.getenv("FACE_RECOGNITION_API_PORT")
-ENDPOINT = os.getenv("FACE_RECOGNITION_API_ENDPOINT")
-
-FACE_RECOGNITION_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
-FACE_RECOGNITION_API_KEY = os.getenv("FACE_RECOGNITION_API_KEY")
-
-#SEGMENTATION
-SERVER = os.getenv("SEGMENTATION_API_SERVER")
-PORT = os.getenv("SEGMENTATION_API_PORT")
-ENDPOINT = os.getenv("SEGMENTATION_API_ENDPOINT")
-
-SEGMENTATION_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
-SEGMENTATION_API_KEY = os.getenv("SEGMENTATION_API_KEY")
-
-#CLASSIFICATION
-SERVER = os.getenv("CLASSIFICATION_API_SERVER")
-PORT = os.getenv("CLASSIFICATION_API_PORT")
-ENDPOINT = os.getenv("CLASSIFICATION_API_ENDPOINT")
-
-CLASSIFICATION_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
-CLASSIFICATION_API_KEY = os.getenv("CLASSIFICATION_API_KEY")
+MODELS_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
+MODELS_API_KEY = os.getenv("MODELS_API_KEY")
+HEADER = {"access_token": MODELS_API_KEY }
 
 app = Celery('tasks', broker=f"amqp://{BROKER_SERVER}")
 
@@ -78,61 +56,38 @@ def identify_clothes(id_client, image_paths):
         'article': list(dict_article.keys())
     }
 
-    for image_path in image_paths:
+    face_id_b64 = get_faceid(id_client)
+    face_id_byte_arr = utils_image.image_base64_to_buffer(face_id_b64)
 
+    for image_path in image_paths:
         obj_response = object_detection(image_path,'person')
 
-        # Check if the response is OK
-        if not obj_response.ok:
-            #TRATAR
+        if obj_response.status_code != 200:
             continue
 
-        #Implementar o GET da imagem base64 que está na DB
-        face_id = get_faceid(id_client)
-        face_response = face_detection(face_id, io.BytesIO(obj_response.content))
+        data_obj_detection = json.loads(obj_response.content)
+        for image_base64 in data_obj_detection['images']:
+            obj_detec_byte_arr = utils_image.image_base64_to_buffer(image_base64)
 
-        if not face_response.ok:
-            #TRATAR
-            continue
+            face_response = face_detection(face_id_byte_arr, 
+                                        obj_detec_byte_arr)
+
+            if face_response.status_code == 200:
+                data_face_detection = json.loads(face_response.content)
+                break
         
-        image = Image.open(io.BytesIO(face_response.content))
-        timestamp = int(time.time())
-        image_name =  f"{id_client}_face_{timestamp}.jpg"
-        face_image_path = IMAGE_TMP_DIR + "/" + image_name
-        image.save(face_image_path)
+        face_detection_buffer = utils_image.image_base64_to_buffer(
+            data_face_detection['images'])
 
-        segmentation_response = image_segmentation(face_image_path)
+        segment_response = image_segmentation(face_detection_buffer)
+        if segment_response.status_code == 200:
+            data_segmentation = json.loads(segment_response.content)
 
-        os.remove(face_image_path)
-
-        # Check if the response is OK
-        if segmentation_response.ok:
-            # Read the ZIP archive from the response content
-            zip_file = zipfile.ZipFile(io.BytesIO(segmentation_response.content))
-            
-            # Extract and display each image
-            for file_name in zip_file.namelist():
-                # Open the image from the ZIP file
-                with zip_file.open(file_name) as image_file:
-                    print('Extracting the categories from the cropped image ...')
-
-                    # Convert the image into an in-memory binary file
-                    # Create a bytes buffer
-                    img_byte_arr = io.BytesIO()  
-                    # Save the image in JPEG format in the buffer
-                    image.save(img_byte_arr, format='JPEG') 
-                    # Go back to the start of the BytesIO buffer 
-                    img_byte_arr.seek(0)  
-
-                    # Perform CLIP evaluation to get the best 
-                    # matching category for each attribute
-                    selected_categories = image_classification(
-                        dict_of_categories,
-                        img_byte_arr)
-
-                    #Implementar armazenamento na base de dados.
-                    print(f"path: {image_file}")
-                    print(selected_categories)
+            for img_segmentation in data_segmentation['images']:
+                img_seg_buffer = utils_image.image_base64_to_buffer(img_segmentation)
+                image_classification(dict_of_categories, 
+                                     img_seg_buffer, 
+                                     utils_image.generate_image_name())
 
         # Excluir todas as imagens desnecessárias
         # Uma vez finalizado o looping, implementar um alerta por e-mail.
@@ -158,62 +113,66 @@ def get_categories(method, key):
     return dict
 
 @app.task
-def object_detection(image_path, object_type):
-    header = {"access_token": OBJ_DETECTION_API_KEY }
+def object_detection(image, object_type):
     category_to_detect = {'category_to_detect':object_type}
 
-    with open(image_path, "rb") as image_file:
-        files = {"image": (image_path, image_file, get_mime_type(image_path))}
+    with open(image, "rb") as image_file:
+        files = {"image": (image, image_file, utils_image.get_mime_type(image))}
 
-        response = requests.post(f"{OBJ_DETECTION_URI}/crop_detection",
+        response = requests.post(f"{MODELS_URI}/object_detection",
                             files=files,
                             data=category_to_detect,
-                            headers=header)
+                            headers=HEADER)
     
     return response
 
 @app.task
-def face_detection(image_path, zip_file):
-    header = {"access_token":FACE_RECOGNITION_API_KEY}
+def face_detection(image, images_to_search):
 
-    zip_file_content = base64.b64decode(zip_file)
-    zip_file = io.BytesIO(zip_file_content)  # Converte de volta para BytesIO
+    image_file = open(image, "rb")
+    images_to_search_file = open(images_to_search, "rb") 
+    files = {"image": (image, 
+                        image_file, 
+                        utils_image.get_mime_type(image)),
+            "images_to_search" : (images_to_search, 
+                                    images_to_search_file,
+                                    utils_image.get_mime_type(
+                                        images_to_search))}
 
-    with open(image_path, "rb") as image_file:
-            files = {"image": (image_path, image_file, get_mime_type(image_path)),
-                    "images_to_search" : ('archive.zip', zip_file , "application/x-zip-compressed")}
-
-            response = requests.post(f"{FACE_RECOGNITION_URI}/face_detection",
-                                files=files,
-                                headers=header)
+    response = requests.post(f"{MODELS_URI}/face_detection",
+                        files=files,
+                        headers=HEADER)
+    
+    image_file.close()
+    images_to_search_file.close()
     
     return response
 
 @app.task
 def image_segmentation(image_path):
-    header = {"access_token":SEGMENTATION_API_KEY}
-    
     with open(image_path, "rb") as image_file:
-        files = {"image": (image_path, image_file, get_mime_type(image_path))}
+        files = {"image": (image_path, 
+                           image_file, 
+                           utils_image.get_mime_type(image_path))}
         
-        response = requests.post(f"{SEGMENTATION_URI}/crop_fullbody_clothes",
+        response = requests.post(f"{MODELS_URI}/clothes_segmentation",
                                 files=files,
-                                headers=header)
+                                headers=HEADER)
 
     return response
 
 @app.task
 def image_classification(subcategories, image_path, file_name):
-
-    header = {"access_token": CLASSIFICATION_API_KEY}
     categories = {'categories_dict': json.dumps(subcategories)}
 
-    files = {"image": (file_name, image_path, get_mime_type(file_name))}
+    files = {"image": (file_name, 
+                       image_path, 
+                       utils_image.get_mime_type(file_name))}
 
-    response = requests.post(f"{CLASSIFICATION_URI}/fit_categories",
+    response = requests.post(f"{MODELS_URI}/image_classification",
                         files=files,
                         data=categories,
-                        headers=header)
+                        headers=HEADER)
     
     return response.json()
 
@@ -221,12 +180,7 @@ def image_classification(subcategories, image_path, file_name):
 def get_faceid(client_id):
 
     header = {"access_token": PG_API_KEY}
-
     response = requests.post(f"{PG_URI}/get_faceid?id_client={client_id}",
                              headers=header)
     
     return response
-
-def get_mime_type(filename):
-    mime_type, encoding = mimetypes.guess_type(filename)
-    return mime_type

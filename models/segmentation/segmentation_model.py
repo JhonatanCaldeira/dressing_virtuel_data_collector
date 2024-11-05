@@ -1,13 +1,9 @@
 from transformers import SegformerImageProcessor, AutoModelForSemanticSegmentation
-from schemas import schema
 from PIL import Image
+from utils import utils_image
 import torch.nn as nn
 import torch
 import numpy as np
-import time
-import random
-import string
-import os
 
 class SegmentationModel():
 
@@ -57,19 +53,6 @@ class SegmentationModel():
     def set_image_temporary_directory(self, temp_dir):
         self.__temp_dir = temp_dir
 
-    def generate_image_name(self, extension="png"):
-        # Get the current timestamp
-        timestamp = int(time.time())
-        
-        # Generate a random string of 6 characters
-        random_str = ''.join(random.choices(
-            string.ascii_lowercase + string.digits, k=6))
-        
-        # Combine timestamp and random string to create the image name
-        image_name = f"image_{timestamp}_{random_str}.{extension}"
-        
-        return image_name
-
     def clothes_segmentation(self, image_path):
         """
         Segments clothing from a given image using a pre-trained semantic segmentation model.
@@ -90,6 +73,9 @@ class SegmentationModel():
 
         # Open and preprocess the image for the model
         image = Image.open(image_path)
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
         inputs = processor(images=image, return_tensors="pt")
 
         # Move inputs to the same device as the model
@@ -112,7 +98,7 @@ class SegmentationModel():
 
         return upsampled_logits
 
-    def crop_clothes_from_fullbody(self, image_to_segment: str):
+    def crop_clothes_from_fullbody(self, image_to_segment):
         """
         Segments clothing from a full-body image and crops out the 
         detected clothing items.
@@ -129,6 +115,7 @@ class SegmentationModel():
         device = self.device
         
         # Perform segmentation on the input image, returning logits 
+        image_to_segment = utils_image.convert_base64_to_bytesIO(image_to_segment)
         upsampled_logits = self.clothes_segmentation(image_to_segment)
         upsampled_logits = upsampled_logits.to(device)
 
@@ -147,34 +134,30 @@ class SegmentationModel():
 
         # Open the original image
         return_images = []
-        with open(image_to_segment, 'rb') as path:
-            image = Image.open(path)    
+        image = Image.open(image_to_segment)    
 
-            for label in unique_labels:
-                # Skip labels that are not in the valid_labels list
-                if label not in self.__valid_labels:
-                    continue
-                
-                # Convert the segmentation map to a binary mask for the target class
-                target_class = label  # Define the class to be extracted
-                binary_mask = (pred_seg == target_class).astype(np.uint8)
+        for label in unique_labels:
+            # Skip labels that are not in the valid_labels list
+            if label not in self.__valid_labels:
+                continue
+            
+            # Convert the segmentation map to a binary mask for the target class
+            target_class = label  # Define the class to be extracted
+            binary_mask = (pred_seg == target_class).astype(np.uint8)
 
-                # Find the bounding box of the target segment using non-zero indices of the binary mask
-                non_zero_indices = np.nonzero(binary_mask)
-                
-                # Calculate the bounding box limits (min and max coordinates)
-                min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
-                min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
+            # Find the bounding box of the target segment using non-zero indices of the binary mask
+            non_zero_indices = np.nonzero(binary_mask)
+            
+            # Calculate the bounding box limits (min and max coordinates)
+            min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
+            min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
 
-                # Crop the original image using the calculated bounding box limits
-                cropped_image = image.crop((min_x, min_y, max_x, max_y))
-                cropped_image_path = os.path.join(self.__temp_dir, 
-                                                self.generate_image_name())
-                
-                cropped_image.save(cropped_image_path)
-                return_images.append(cropped_image_path)
+            # Crop the original image using the calculated bounding box limits
+            cropped_image = image.crop((min_x, min_y, max_x, max_y))
+            return_images.append(utils_image.convert_pil_to_base64(cropped_image))
 
-        return return_images 
+        response = {"images": return_images}
+        return response 
 
     def crop_clothes(self, image_to_segment: str):
         """
@@ -188,6 +171,8 @@ class SegmentationModel():
         Returns:
             List[str]: Return a list of paths to the temporary images.
         """
+
+        image_to_segment = utils_image.convert_base64_to_bytesIO(image_to_segment)
         upsampled_logits = self.clothes_segmentation(image_to_segment)
 
         # Get the segmentation map
@@ -207,27 +192,23 @@ class SegmentationModel():
         target_class = max_label
         binary_mask = (pred_seg == target_class).astype(np.uint8)
 
-        with open(image_to_segment, 'rb') as path:
-            # Create a blank (transparent) image with the same size as the original image
-            image = Image.open(path)
-            cropped_image = Image.new("RGBA", image.size)
-
-            # Apply the mask to the original image
-            cropped_image = Image.composite(image.convert("RGBA"), 
-                                            cropped_image, 
-                                            Image.fromarray(binary_mask * 255))
-
-            # Crop the image to remove excess transparent borders
-            non_zero_indices = np.nonzero(binary_mask)
-            min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
-            min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
-            cropped_image = cropped_image.crop((min_x, min_y, max_x, max_y))
-
-            cropped_image_path = os.path.join(self.__temp_dir, 
-                                            self.generate_image_name())
-            cropped_image.save(cropped_image_path)
-
         return_images = []
-        return_images.append(cropped_image_path)
 
-        return return_images
+        image = Image.open(image_to_segment)
+        cropped_image = Image.new("RGBA", image.size)
+
+        # Apply the mask to the original image
+        cropped_image = Image.composite(image.convert("RGBA"), 
+                                        cropped_image, 
+                                        Image.fromarray(binary_mask * 255))
+
+        # Crop the image to remove excess transparent borders
+        non_zero_indices = np.nonzero(binary_mask)
+        min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
+        min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
+        cropped_image = cropped_image.crop((min_x, min_y, max_x, max_y))
+
+        return_images.append(utils_image.convert_pil_to_base64(cropped_image))
+
+        response = {"images": return_images}
+        return response 
