@@ -319,7 +319,8 @@ def create_color(db: Session, color: schema.Color):
     return db_color
 
 
-def create_image_product(db: Session, image: schema.ImageProduct):
+def create_image_product(db: Session, 
+                         image: schema.ImageProduct):
     """
     Creates a new image product entry in the database.
 
@@ -336,7 +337,8 @@ def create_image_product(db: Session, image: schema.ImageProduct):
         id_gender=image.id_gender,
         id_season=image.id_season,
         id_color=image.id_color,
-        id_articletype=image.id_articletype)
+        id_articletype=image.id_articletype,
+        id_client=image.id_client)
 
     db.add(db_image)
     db.commit()

@@ -39,6 +39,9 @@ class ObjectDetection:
         image_buffer = utils_image.convert_base64_to_bytesIO(image_base64)
         image = Image.open(image_buffer)
 
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
         inputs = processor(images=image, return_tensors="pt")
         inputs = {k: v.to(device) for k, v in inputs.items()}
         outputs = model(**inputs)

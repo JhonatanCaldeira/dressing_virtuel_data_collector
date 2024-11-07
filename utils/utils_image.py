@@ -81,6 +81,9 @@ def convert_pil_to_base64(image: Image.Image, format: str = 'JPEG') -> str:
 def image_base64_to_buffer(image_base64):
     image_buffer = convert_base64_to_bytesIO(image_base64)
     image = Image.open(image_buffer)
+    
+    if image.mode == 'RGBA':
+        image = image.convert('RGB')
 
     img_byte_arr = io.BytesIO()
     image.save(img_byte_arr, format='JPEG')

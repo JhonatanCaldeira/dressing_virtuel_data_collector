@@ -1,19 +1,19 @@
 from celery import Celery
 from PIL import Image
 from utils import utils_image
+from dotenv import load_dotenv
+from database.connection import SessionLocal, engine
+from database import crud
+from sqlalchemy.orm import Session
+from schemas.schema import ImageProduct
 import requests
 import json
-import io, zipfile
 import os
-import time
-import base64
 
-
-from dotenv import load_dotenv
 load_dotenv(dotenv_path="config/.env")
 
 # Define the path where the fashion dataset is stored
-IMAGE_TMP_DIR = os.getenv("IMAGE_TMP_DIR")
+IMAGE_STORAGE_DIR = os.getenv("IMAGE_STORAGE_DIR")
 BROKER_SERVER = os.getenv("BROKER_SERVER")
 
 #DB
@@ -33,6 +33,19 @@ MODELS_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
 MODELS_API_KEY = os.getenv("MODELS_API_KEY")
 HEADER = {"access_token": MODELS_API_KEY }
 
+
+def get_db():
+    """
+    Provides a database session to interact with the database during the request lifecycle.
+    Closes the session after the request is completed.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()  # Ensure the session is closed after use
+
+
 app = Celery('tasks', broker=f"amqp://{BROKER_SERVER}")
 
 app.conf.update(
@@ -42,52 +55,103 @@ app.conf.update(
 
 @app.task
 def identify_clothes(id_client, image_paths):
+    # Load Categories
     dict_genders = get_categories('genders','gender')
     dict_seasons = get_categories('seasons','name')
     dict_colors = get_categories('colors','name')
     dict_usage = get_categories('usage_types','name')
     dict_article = get_categories('article_types','name')
 
-    dict_of_categories = {
-        'gender': list(dict_genders.keys()),
-        'season': list(dict_seasons.keys()),
-        'color': list(dict_colors.keys()),
-        'usage': list(dict_usage.keys()),
-        'article': list(dict_article.keys())
+    dict_of_dict_categories = {
+        'id_gender': dict_genders,
+        'id_season': dict_seasons,
+        'id_color': dict_colors,
+        'id_usagetype': dict_usage,
+        'id_articletype': dict_article     
     }
 
-    face_id_b64 = get_faceid(id_client)
-    face_id_byte_arr = utils_image.image_base64_to_buffer(face_id_b64)
+    dict_of_categories = {
+        'id_gender': list(dict_genders.keys()),
+        'id_season': list(dict_seasons.keys()),
+        'id_color': list(dict_colors.keys()),
+        'id_usagetype': list(dict_usage.keys()),
+        'id_articletype': list(dict_article.keys())
+    }
 
+    # Get Base 64 Client Face ID
+    face_id = get_faceid(id_client)
+    if face_id.status_code != 200:
+        # TRATAR
+        pass
+
+    face_id_b64 = json.loads(face_id.content)['images']
+
+    # For each image provided by the client:
     for image_path in image_paths:
+        # Extract each person present in the image.
         obj_response = object_detection(image_path,'person')
 
         if obj_response.status_code != 200:
             continue
 
         data_obj_detection = json.loads(obj_response.content)
+
         for image_base64 in data_obj_detection['images']:
-            obj_detec_byte_arr = utils_image.image_base64_to_buffer(image_base64)
+            # For each person identify the client based in its FaceID
+            face_response = face_detection(face_id_b64, 
+                                           image_base64)
 
-            face_response = face_detection(face_id_byte_arr, 
-                                        obj_detec_byte_arr)
+            if face_response.status_code != 200:
+                continue
 
-            if face_response.status_code == 200:
-                data_face_detection = json.loads(face_response.content)
-                break
-        
-        face_detection_buffer = utils_image.image_base64_to_buffer(
-            data_face_detection['images'])
+            data_face_detection = json.loads(face_response.content)
+            face_detection_b64 = data_face_detection['images']
+            # Once the client have been detected in the image
+            # Extract each piece of cloth weared by the client
+            segment_response = image_segmentation(face_detection_b64)
 
-        segment_response = image_segmentation(face_detection_buffer)
-        if segment_response.status_code == 200:
+            if segment_response.status_code != 200:
+                continue
+
             data_segmentation = json.loads(segment_response.content)
 
-            for img_segmentation in data_segmentation['images']:
-                img_seg_buffer = utils_image.image_base64_to_buffer(img_segmentation)
-                image_classification(dict_of_categories, 
-                                     img_seg_buffer, 
-                                     utils_image.generate_image_name())
+            for img_segmentation_b64 in data_segmentation['images']:
+                # Classify each piece of cloth
+                image_name = utils_image.generate_image_name()
+                classification_response = image_classification(
+                    dict_of_categories, 
+                    img_segmentation_b64, 
+                    image_name)
+                
+                if classification_response.status_code != 200:
+                    continue
+
+                # Save the images in the client directory
+                # Save the image path + categories in the DB
+                image_bytes = utils_image.convert_base64_to_bytesIO(img_segmentation_b64)
+                image_buffer = Image.open(image_bytes)
+                if image_buffer.mode == 'RGBA':
+                        image_buffer = image_buffer.convert('RGB')
+                image_new_path = IMAGE_STORAGE_DIR + '/' + str(id_client) + '/' + image_name
+                image_buffer.save(image_new_path, format='JPEG')
+                image_buffer.close()
+
+                data_classification = json.loads(classification_response.content)
+
+                image_product = {}
+                image_product['id'] = None
+                image_product['path'] = image_new_path
+                image_product['id_client'] = id_client
+                print(data_classification)
+
+                for key, value in data_classification.items():
+                    image_product[key] = dict_of_dict_categories[key][value]
+
+                print(image_product)
+                new_image_product = crud.create_image_product(next(get_db()),
+                                                              ImageProduct(**image_product))
+                
+                print(new_image_product)
 
         # Excluir todas as imagens desnecessárias
         # Uma vez finalizado o looping, implementar um alerta por e-mail.
@@ -127,46 +191,43 @@ def object_detection(image, object_type):
     return response
 
 @app.task
-def face_detection(image, images_to_search):
+def face_detection(image_b64: str, images_to_search_b64: str):
+    image = utils_image.convert_base64_to_bytesIO(image_b64)
+    images_to_search = utils_image.convert_base64_to_bytesIO(images_to_search_b64)
 
-    image_file = open(image, "rb")
-    images_to_search_file = open(images_to_search, "rb") 
-    files = {"image": (image, 
-                        image_file, 
-                        utils_image.get_mime_type(image)),
-            "images_to_search" : (images_to_search, 
-                                    images_to_search_file,
-                                    utils_image.get_mime_type(
-                                        images_to_search))}
+    files = {"image": ('faceid.jpeg', 
+                       image,
+                       utils_image.get_mime_type('faceid.jpeg')),
+            "images_to_search" : ('unknown_face.jpeg',
+                                  images_to_search,
+                                  utils_image.get_mime_type(
+                                      'unknown_face.jpeg'))}
 
     response = requests.post(f"{MODELS_URI}/face_detection",
                         files=files,
                         headers=HEADER)
-    
-    image_file.close()
-    images_to_search_file.close()
-    
     return response
 
 @app.task
-def image_segmentation(image_path):
-    with open(image_path, "rb") as image_file:
-        files = {"image": (image_path, 
-                           image_file, 
-                           utils_image.get_mime_type(image_path))}
-        
-        response = requests.post(f"{MODELS_URI}/clothes_segmentation",
-                                files=files,
-                                headers=HEADER)
+def image_segmentation(image_b64: str):
+    image = utils_image.convert_base64_to_bytesIO(image_b64)
+    files = {"image": ('segmentation.jpeg', 
+                       image, 
+                       utils_image.get_mime_type('segmentation.jpeg'))}
+    
+    response = requests.post(f"{MODELS_URI}/clothes_segmentation",
+                            files=files,
+                            headers=HEADER)
 
     return response
 
 @app.task
-def image_classification(subcategories, image_path, file_name):
+def image_classification(subcategories, image_b64, file_name):
+    image = utils_image.image_base64_to_buffer(image_b64)
     categories = {'categories_dict': json.dumps(subcategories)}
 
     files = {"image": (file_name, 
-                       image_path, 
+                       image, 
                        utils_image.get_mime_type(file_name))}
 
     response = requests.post(f"{MODELS_URI}/image_classification",
@@ -174,13 +235,12 @@ def image_classification(subcategories, image_path, file_name):
                         data=categories,
                         headers=HEADER)
     
-    return response.json()
+    return response
 
 @app.task
 def get_faceid(client_id):
-
     header = {"access_token": PG_API_KEY}
-    response = requests.post(f"{PG_URI}/get_faceid?id_client={client_id}",
+    response = requests.get(f"{PG_URI}/get_faceid?id_client={client_id}",
                              headers=header)
     
     return response

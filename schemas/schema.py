@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import List
 
 class Color(BaseModel):
     """
@@ -120,6 +121,7 @@ class ImageProduct(BaseModel):
     id_season: int
     id_color: int
     id_articletype: int
+    id_client: int
 
     class Config:
         orm_mode = True
@@ -183,3 +185,7 @@ class ClientAuth(BaseModel):
 class ClientAuthResp(BaseModel):
     id: int
     email: str
+
+class CeleryImageClassification(BaseModel):
+    id: int
+    images: List[str]

@@ -267,8 +267,4 @@ def get_faceid(id_client: int,
     if not db_faceid:
         raise HTTPException(status_code=404, detail="FaceId not found.")
 
-    image_bytes = base64.b64decode(db_faceid)
-    image_stream = io.BytesIO(image_bytes)
-
-    # Retorna a imagem como um StreamingResponse
-    return StreamingResponse(image_stream, media_type="image/jpeg")
+    return {'images': db_faceid.tobytes().decode("utf-8")}
