@@ -37,6 +37,6 @@ async def root():
 async def task_image_classification(request: CeleryImageClassification,
                                     api_key: APIKey = Depends(get_api_key)):
     
-    tasks.identify_clothes.delay(request.id, request.images)
+    tasks.identify_clothes(request.id, request.images)
 
     return True

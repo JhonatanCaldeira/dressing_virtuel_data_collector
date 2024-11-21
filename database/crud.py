@@ -300,6 +300,47 @@ def get_images_and_categories(db: Session, skip: int = 0, limit: int = 100):
                         model.UsageType.id == model.ImageProduct.id_usagetype
                 ).offset(skip).limit(limit).all()
 
+def get_images_from_user(db: Session, client_id: int, 
+                         skip: int = 0, limit: int = 100):
+    """
+    Retrieves images along with their associated categories from the database.
+
+    Args:
+        db (Session): The SQLAlchemy database session.
+        skip (int): The number of records to skip (for pagination).
+        limit (int): The maximum number of records to return.
+
+    Returns:
+        list[tuple]: A list of tuples containing image and category information.
+    """
+    return db.query(
+                model.ImageProduct.id,
+                model.ImageProduct.path,
+                model.Gender.gender,
+                model.Color.name.label('color'),
+                model.Season.name.label('season'),
+                model.ArticleType.name.label('article'),
+                model.Category.name.label('category'),
+                model.SubCategory.name.label('sub_category'),
+                model.UsageType.name.label('usage_type')
+                ).join(model.Gender, 
+                        model.Gender.id == model.ImageProduct.id_gender
+                ).join(model.Color, 
+                        model.Color.id == model.ImageProduct.id_color
+                ).join(model.Season, 
+                        model.Season.id == model.ImageProduct.id_season
+                ).join(model.ArticleType, 
+                        model.ArticleType.id == model.ImageProduct.id_articletype
+                ).join(model.SubCategory, 
+                        model.SubCategory.id == model.ArticleType.id_subcategory
+                ).join(model.Category, 
+                        model.Category.id == model.SubCategory.id_category
+                ).join(model.UsageType, 
+                        model.UsageType.id == model.ImageProduct.id_usagetype
+                ).join(model.Client,
+                       model.Client.id == model.ImageProduct.id_client
+                ).filter(model.ImageProduct.id_client==client_id
+                         ).offset(skip).limit(limit)
 
 def create_color(db: Session, color: schema.Color):
     """

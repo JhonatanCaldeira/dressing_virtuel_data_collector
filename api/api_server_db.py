@@ -268,3 +268,12 @@ def get_faceid(id_client: int,
         raise HTTPException(status_code=404, detail="FaceId not found.")
 
     return {'images': db_faceid.tobytes().decode("utf-8")}
+
+@app.get(f"/{PREFIX}/images_from_client/", response_model=list[schema.ImageProductDetailed])
+def get_images_from_client(skip: int = 0, limit: int = 100, client_id: int = 0,
+                           db: Session = Depends(get_db),
+                           api_key: APIKey = Depends(get_api_key)):
+
+    images_from_client = crud.get_images_from_user(db, skip=skip, limit=limit, 
+                                                   client_id=client_id)
+    return images_from_client

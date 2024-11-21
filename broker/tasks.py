@@ -33,6 +33,23 @@ MODELS_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
 MODELS_API_KEY = os.getenv("MODELS_API_KEY")
 HEADER = {"access_token": MODELS_API_KEY }
 
+# import logging
+
+# logger = logging.getLogger('celery_task_logger')
+# logger.setLevel(logging.DEBUG)
+
+# # Adicionar handler de console para exibir logs no terminal
+# console_handler = logging.StreamHandler()
+# console_handler.setLevel(logging.DEBUG)
+
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# console_handler.setFormatter(formatter)
+
+# logger.addHandler(console_handler)
+
+from celery.utils.log import get_task_logger
+logger = get_task_logger(__name__)
+
 
 def get_db():
     """
@@ -55,6 +72,8 @@ app.conf.update(
 
 @app.task
 def identify_clothes(id_client, image_paths):
+    logger.debug(f"Task started for client ID: {id_client}")
+
     # Load Categories
     dict_genders = get_categories('genders','gender')
     dict_seasons = get_categories('seasons','name')
@@ -81,6 +100,7 @@ def identify_clothes(id_client, image_paths):
     # Get Base 64 Client Face ID
     face_id = get_faceid(id_client)
     if face_id.status_code != 200:
+        logger.error(f"Failed to get face ID for client ID {id_client}: {face_id.status_code}")
         # TRATAR
         pass
 
@@ -88,10 +108,14 @@ def identify_clothes(id_client, image_paths):
 
     # For each image provided by the client:
     for image_path in image_paths:
+        logger.debug(f"Processing image: {image_path}")
+        print(f"Processing image: {image_path}")
+
         # Extract each person present in the image.
         obj_response = object_detection(image_path,'person')
 
         if obj_response.status_code != 200:
+            logger.error(f"Object detection failed for image: {image_path}")
             continue
 
         data_obj_detection = json.loads(obj_response.content)
@@ -102,6 +126,7 @@ def identify_clothes(id_client, image_paths):
                                            image_base64)
 
             if face_response.status_code != 200:
+                logger.error(f"Face detection failed for image: {image_path}")
                 continue
 
             data_face_detection = json.loads(face_response.content)
@@ -111,6 +136,7 @@ def identify_clothes(id_client, image_paths):
             segment_response = image_segmentation(face_detection_b64)
 
             if segment_response.status_code != 200:
+                logger.error("Segmentation failed.")
                 continue
 
             data_segmentation = json.loads(segment_response.content)
@@ -142,18 +168,17 @@ def identify_clothes(id_client, image_paths):
                 image_product['id'] = None
                 image_product['path'] = image_new_path
                 image_product['id_client'] = id_client
-                print(data_classification)
 
                 for key, value in data_classification.items():
                     image_product[key] = dict_of_dict_categories[key][value]
 
-                print(image_product)
                 new_image_product = crud.create_image_product(next(get_db()),
                                                               ImageProduct(**image_product))
                 
-                print(new_image_product)
+        # Remove tmp images
+        # for image_path in image_paths:
+        #     os.remove(image_path)
 
-        # Excluir todas as imagens desnecessárias
         # Uma vez finalizado o looping, implementar um alerta por e-mail.
     return True
 
