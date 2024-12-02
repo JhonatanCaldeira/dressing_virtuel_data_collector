@@ -13,6 +13,7 @@ from models.object_detection import object_detection_model
 from models.face_detection import face_detection_model
 from models.segmentation import segmentation_model
 from models.classification import classification_model
+from logger.logging_config import setup_logging
 from utils import utils_image
 import os
 import json
@@ -21,25 +22,43 @@ PREFIX = os.getenv("MODELS_API_ENDPOINT")
 API_KEY = os.getenv("MODELS_API_KEY")
 TEMP_DIR = os.getenv("IMAGE_TMP_DIR")
 
+logger = setup_logging(__name__)
+
+
 # Model Instantiation
-print("Loading Object Detection Model")
-object_detection = object_detection_model.ObjectDetection(
-    model_name=os.getenv("OBJ_DETECTION_MODEL_NAME"),
-    temp_dir=TEMP_DIR)
+logger.info("Loading Object Detection Model")
+try:
+    object_detection = object_detection_model.ObjectDetection(
+        model_name=os.getenv("OBJ_DETECTION_MODEL_NAME"),
+        temp_dir=TEMP_DIR)
+except Exception as e:
+    logger.error(f"Error loading object detection model: {e}")
+    raise
 
-print("Loading Face Detection Model")
-face_recognition = face_detection_model.FaceDetectionModel(temp_dir=TEMP_DIR)
+logger.info("Loading Face Detection Model")
+try:
+    face_recognition = face_detection_model.FaceDetectionModel(temp_dir=TEMP_DIR)
+except Exception as e:
+    logger.error(f"Error loading face detection model: {e}")
+    raise
 
-print("Loading Segmentation Model")
-VALID_LABELS = [4, 5, 6, 7]
-segmentation = segmentation_model.SegmentationModel(
-    model_name=os.getenv("SEGMENTATION_MODEL_NAME"),
-    temp_dir=TEMP_DIR,
-    valid_labels=VALID_LABELS)
+logger.info("Loading Segmentation Model")
+try:
+    segmentation = segmentation_model.SegmentationModel(
+        model_name=os.getenv("SEGMENTATION_MODEL_NAME"),
+        temp_dir=TEMP_DIR,
+        valid_labels=[4, 5, 6, 7])
+except Exception as e:
+    logger.error(f"Error loading segmentation model: {e}")
+    raise
 
-print("Loading Classification Model")
-classification = classification_model.ClassificationModel(
-    os.getenv("CLASSIFICATION_MODEL_NAME"))
+logger.info("Loading Classification Model")
+try:
+    classification = classification_model.ClassificationModel(
+        os.getenv("CLASSIFICATION_MODEL_NAME"))
+except Exception as e:
+    logger.error(f"Error loading classification model: {e}")
+    raise
 
 # API Instatiation
 app = FastAPI()
@@ -60,6 +79,7 @@ async def root():
     """
     Root endpoint that returns a simple message.
     """
+    logger.info("Models API its alive")
     return {"message": "I'm alive!"}
 
 @app.post(f"/{PREFIX}/object_detection")
@@ -69,9 +89,16 @@ async def crop_object_image(image: UploadFile = File(...),
     
     image_base64 = await utils_image.convert_image_to_base64(image)
 
-    returned_images = object_detection.detection(
-        image_base64,
-        category_to_detect)
+    try:
+        returned_images = object_detection.detection(
+            image_base64,
+            category_to_detect)
+    except Exception as e:
+        logger.error(f"Error executing object detection model: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Something went wrong, please contact the administrator."
+        )
 
     if returned_images == {"images": []}:
         raise HTTPException(
@@ -89,9 +116,16 @@ async def face_detection(image: UploadFile = File(...),
     face_id_base64 = await utils_image.convert_image_to_base64(image)
     unknown_image_b64 = await utils_image.convert_image_to_base64(images_to_search)
 
-    returned_images = face_recognition.face_recognition(
-        face_id_base64,
-        unknown_image_b64)
+    try:
+        returned_images = face_recognition.face_recognition(
+            face_id_base64,
+            unknown_image_b64)
+    except Exception as e:
+        logger.error(f"Error executing face detection model: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Something went wrong, please contact the administrator."
+        )
 
     if returned_images == {"images": ''}:
         raise HTTPException(
@@ -106,8 +140,15 @@ async def face_detection(image: UploadFile = File(...),
 async def single_clothes_segmentation(image: UploadFile = File(...),
                         api_key: APIKey = Depends(get_api_key)):
 
-    image_base64 = await utils_image.convert_image_to_base64(image)
-    returned_images = segmentation.crop_clothes(image_base64)
+    try:
+        image_base64 = await utils_image.convert_image_to_base64(image)
+        returned_images = segmentation.crop_clothes(image_base64)
+    except Exception as e:
+        logger.error(f"Error executing segmentation model: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Something went wrong, please contact the administrator."
+        )
 
     if returned_images == {"images": []}:
         raise HTTPException(
@@ -121,8 +162,15 @@ async def single_clothes_segmentation(image: UploadFile = File(...),
 async def clothes_segmentation(image: UploadFile = File(...),
                           api_key: APIKey = Depends(get_api_key)):
 
-    image_base64 =  await utils_image.convert_image_to_base64(image)
-    returned_images = segmentation.crop_clothes_from_fullbody(image_base64)
+    try:
+        image_base64 =  await utils_image.convert_image_to_base64(image)
+        returned_images = segmentation.crop_clothes_from_fullbody(image_base64)
+    except Exception as e:
+        logger.error(f"Error executing segmentation model: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Something went wrong, please contact the administrator."
+        )
         
     if returned_images == {"images": []}:
         raise HTTPException(
@@ -144,10 +192,17 @@ async def get_categories_from_image(
             status_code=400, 
             detail="Invalid JSON format for dict_of_categories")
 
-    image_base64 = await utils_image.convert_image_to_base64(image)
-    category = classification.image_classification_from_dict(
-        categories_dict,
-        image_base64)
+    try:
+        image_base64 = await utils_image.convert_image_to_base64(image)
+        category = classification.image_classification_from_dict(
+            categories_dict,
+            image_base64)
+    except Exception as e:
+        logger.error(f"Error executing classification model: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Something went wrong, please contact the administrator."
+        )
         
     if category == {}:
         raise HTTPException(

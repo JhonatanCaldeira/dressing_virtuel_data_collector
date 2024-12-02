@@ -1,6 +1,7 @@
-from sqlalchemy import Integer, String, Column, ForeignKey
+from sqlalchemy import Integer, String, Column, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -151,3 +152,10 @@ class ImageProduct(Base):
 
     id_client= Column(Integer, ForeignKey("tb_client.id"))
     client = relationship("Client")
+
+class LogEntry(Base):
+    __tablename__ = "logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, default=datetime.now())
+    level = Column(String)
+    message = Column(String)

@@ -6,6 +6,7 @@ from database.connection import SessionLocal, engine
 from database import crud
 from sqlalchemy.orm import Session
 from schemas.schema import ImageProduct
+from logger.logging_config import setup_logging
 import requests
 import json
 import os
@@ -33,23 +34,10 @@ MODELS_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
 MODELS_API_KEY = os.getenv("MODELS_API_KEY")
 HEADER = {"access_token": MODELS_API_KEY }
 
-# import logging
+logger = setup_logging(__name__)
 
-# logger = logging.getLogger('celery_task_logger')
-# logger.setLevel(logging.DEBUG)
-
-# # Adicionar handler de console para exibir logs no terminal
-# console_handler = logging.StreamHandler()
-# console_handler.setLevel(logging.DEBUG)
-
-# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# console_handler.setFormatter(formatter)
-
-# logger.addHandler(console_handler)
-
-from celery.utils.log import get_task_logger
-logger = get_task_logger(__name__)
-
+# from celery.utils.log import get_task_logger
+# logger = get_task_logger(__name__)
 
 def get_db():
     """
@@ -60,7 +48,7 @@ def get_db():
     try:
         yield db
     finally:
-        db.close()  # Ensure the session is closed after use
+        db.close()
 
 
 app = Celery('tasks', broker=f"amqp://{BROKER_SERVER}")
@@ -68,7 +56,14 @@ app = Celery('tasks', broker=f"amqp://{BROKER_SERVER}")
 app.conf.update(
     task_always_eager=True,  # Executa as tasks de forma síncrona
     task_eager_propagates=True,  # Propaga exceções para fácil depuração
+    task_default_queue='default',
+    worker_hijack_root_logger=False,
 )
+
+@app.on_after_configure.connect
+def configure_task_logger(sender=None, **kwargs):
+    logger.propagate = False
+
 
 @app.task
 def identify_clothes(id_client, image_paths):
@@ -109,13 +104,12 @@ def identify_clothes(id_client, image_paths):
     # For each image provided by the client:
     for image_path in image_paths:
         logger.debug(f"Processing image: {image_path}")
-        print(f"Processing image: {image_path}")
 
         # Extract each person present in the image.
         obj_response = object_detection(image_path,'person')
 
         if obj_response.status_code != 200:
-            logger.error(f"Object detection failed for image: {image_path}")
+            logger.warning(f"Object detection failed for image: {image_path}")
             continue
 
         data_obj_detection = json.loads(obj_response.content)
@@ -126,7 +120,7 @@ def identify_clothes(id_client, image_paths):
                                            image_base64)
 
             if face_response.status_code != 200:
-                logger.error(f"Face detection failed for image: {image_path}")
+                logger.warning(f"Face detection failed for image: {image_path}")
                 continue
 
             data_face_detection = json.loads(face_response.content)
@@ -158,6 +152,7 @@ def identify_clothes(id_client, image_paths):
                 image_buffer = Image.open(image_bytes)
                 if image_buffer.mode == 'RGBA':
                         image_buffer = image_buffer.convert('RGB')
+                        
                 image_new_path = IMAGE_STORAGE_DIR + '/' + str(id_client) + '/' + image_name
                 image_buffer.save(image_new_path, format='JPEG')
                 image_buffer.close()
@@ -176,8 +171,8 @@ def identify_clothes(id_client, image_paths):
                                                               ImageProduct(**image_product))
                 
         # Remove tmp images
-        # for image_path in image_paths:
-        #     os.remove(image_path)
+        for image_path in image_paths:
+            os.remove(image_path)
 
         # Uma vez finalizado o looping, implementar um alerta por e-mail.
     return True

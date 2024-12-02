@@ -1,5 +1,4 @@
 from sqlalchemy.orm import Session
-# from database.model import ArticleType,Category,Color,Gender,Season,SubCategory,UsageType,ImageProduct,Client
 from database import model
 from schemas import schema
 import bcrypt
@@ -432,3 +431,13 @@ def get_faceid(db: Session, id_client: int):
         return False
 
     return db_client[0]
+
+def insert_log(db: Session, log: schema.Logger):
+    db_log = model.LogEntry(
+        level=log.level,
+        message=log.message)
+    db.add(db_log)
+    db.commit()
+    db.refresh(db_log)
+
+    return True

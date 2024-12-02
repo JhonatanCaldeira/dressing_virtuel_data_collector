@@ -5,9 +5,12 @@ from fastapi import (
     Security
 )
 from fastapi.security.api_key import APIKey, APIKeyHeader
-from broker import tasks
 from schemas.schema import CeleryImageClassification
+from logger.logging_config import setup_logging
+from broker import tasks
 import os
+
+logger = setup_logging(__name__)
 
 PREFIX = os.getenv("CELERY_API_ENDPONT")
 API_KEY = os.getenv("CELERY_API_KEY")
@@ -31,12 +34,17 @@ async def root():
     """
     Root endpoint that returns a simple message.
     """
+    logger.info("Celery API its alive")
+
     return {"message": "I'm alive!"}
 
 @app.post(f"/{PREFIX}/task_image_classification")
 async def task_image_classification(request: CeleryImageClassification,
                                     api_key: APIKey = Depends(get_api_key)):
+    logger.info("Starting task_image_classification")
     
     tasks.identify_clothes(request.id, request.images)
-
+    
+    logger.info("Finished task_image_classification")
+    
     return True

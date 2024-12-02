@@ -189,3 +189,8 @@ class ClientAuthResp(BaseModel):
 class CeleryImageClassification(BaseModel):
     id: int
     images: List[str]
+
+
+class Logger(BaseModel):
+    level: str
+    message: str
