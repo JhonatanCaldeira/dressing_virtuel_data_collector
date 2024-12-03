@@ -99,7 +99,6 @@ async def crop_object_image(image: UploadFile = File(...),
             status_code=500,
             detail=f"Something went wrong, please contact the administrator."
         )
-
     if returned_images == {"images": []}:
         raise HTTPException(
             status_code=204,

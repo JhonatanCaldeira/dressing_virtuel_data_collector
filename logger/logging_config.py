@@ -25,7 +25,7 @@ class DBLogHandler(Handler):
     def __del__(self):
         self.session.close()
 
-def setup_logging(logger_name=__name__, log_level=logging.INFO):
+def setup_logging(logger_name=__name__, log_level=logging.WARNING):
     db_handler = DBLogHandler()
     
     logger = logging.getLogger(logger_name)
