@@ -12,7 +12,7 @@ jobs:
   docker-compose-build:
     runs-on: ubuntu-latest
     container:
-      image: jhonatancaldeira/python-base
+      image: jhonatancaldeira/python-base:3.10
       options: --entrypoint ""
 
     services:
