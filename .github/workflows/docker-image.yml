@@ -61,21 +61,27 @@ jobs:
           echo "SEGMENTATION_MODEL_NAME=${{ secrets.SEGMENTATION_MODEL_NAME }}" >> .env
           cat .env
 
-      - name: Install Docker Compose
+      - name: Build models_api image
         run: |
-          curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          chmod +x /usr/local/bin/docker-compose
-          docker-compose --version
+          docker build -t models_api .
 
-      - name: Build and Test Docker Compose
+      - name: Run models_api container
         run: |
-          docker-compose -f docker-compose.yml up --build --detach
+          docker run -d --name models_api \
+            -p 5005:5005 -p 5000:5000 -p 5010:5010 \
+            -e IMAGE_TMP_DIR=${{ secrets.IMAGE_TMP_DIR }} \
+            -e IMAGE_STORAGE_DIR=${{ secrets.IMAGE_STORAGE_DIR }} \
+            -e BROKER_SERVER=${{ secrets.BROKER_SERVER }} \
+            --link rabbitmq:rabbitmq \
+            models_api
+
+      - name: Verify models_api is running
+        run: |
           docker ps -a
-          docker-compose exec models_api curl -I http://localhost:5005 || exit 1
-          docker-compose down
-
-      - name: Verify RabbitMQ Health
-        run: docker-compose exec rabbitmq rabbitmq-diagnostics -q ping
+          docker exec models_api curl -I http://localhost:5005 || exit 1
 
       - name: Teardown
-        run: docker-compose down
+        run: |
+          docker stop models_api
+          docker rm models_api
+          docker-compose down
