@@ -10,7 +10,10 @@ on:
 
 jobs:
   docker-compose-build:
-    runs-on: jhonatancaldeira/python-base
+    runs-on: ubuntu-latest
+    container:
+      image: jhonatancaldeira/python-base
+      options: --entrypoint ""
 
     services:
       rabbitmq:
@@ -60,11 +63,8 @@ jobs:
           echo "CELERY_API_PORT=${{ secrets.CELERY_API_PORT }}" >> .env
           echo "CELERY_API_KEY=${{ secrets.CELERY_API_KEY }}" >> .env
           echo "OBJ_DETECTION_MODEL_NAME=${{ secrets.OBJ_DETECTION_MODEL_NAME }}" >> .env
-          echo "OBJ_DETECTION_MODEL_DIR=${{ secrets.OBJ_DETECTION_MODEL_DIR }}" >> .env
           echo "CLASSIFICATION_MODEL_NAME=${{ secrets.CLASSIFICATION_MODEL_NAME }}" >> .env
-          echo "CLASSIFICATION_MODEL_DIR=${{ secrets.CLASSIFICATION_MODEL_DIR }}" >> .env
           echo "SEGMENTATION_MODEL_NAME=${{ secrets.SEGMENTATION_MODEL_NAME }}" >> .env
-          echo "SEGMENTATION_MODEL_DIR=${{ secrets.SEGMENTATION_MODEL_DIR }}" >> .env
           cat .env
 
       - name: Build and Test Docker Compose
