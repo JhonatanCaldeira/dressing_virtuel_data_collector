@@ -12,7 +12,7 @@ WORKDIR /app
 COPY ./ /app
 
 # Install any needed packages specified in requirements.txt
-# RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 EXPOSE 5000 5005 5010
 
