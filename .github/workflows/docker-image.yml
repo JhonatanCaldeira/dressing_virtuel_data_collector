@@ -92,10 +92,15 @@ jobs:
         run: |
           pytest tests/api_test.py
 
-      - name: Build Docker image
+      - name: Build Docker image with dynamic tag
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/dressing_virtuel:latest .
+          VERSION=1.0.${{ github.run_number }}
+          IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/dressing-virtuel"
+          echo "Building image: $IMAGE_NAME:$VERSION"
+          docker build -t $IMAGE_NAME:$VERSION .
 
       - name: Push Docker image to Docker Hub
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/dressing_virtuel:latest
+          VERSION=1.0.${{ github.run_number }}
+          IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/dressing-virtuel"
+          docker push $IMAGE_NAME:$VERSION
