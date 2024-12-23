@@ -91,3 +91,11 @@ jobs:
       - name: Pytest Test
         run: |
           pytest tests/api_test.py
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/dressing_virtuel:latest .
+
+      - name: Push Docker image to Docker Hub
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/dressing_virtuel:latest
