@@ -50,9 +50,7 @@ jobs:
           echo "CLASSIFICATION_MODEL_NAME=${{ secrets.CLASSIFICATION_MODEL_NAME }}" >> .env
           echo "SEGMENTATION_MODEL_NAME=${{ secrets.SEGMENTATION_MODEL_NAME }}" >> .env
           cat .env
-          pwd 
           cd ..
-          pwd
 
       - name: Build docker
         run: | 
@@ -70,5 +68,5 @@ jobs:
       - name: Push Docker image to Docker Hub
         run: |
           VERSION=1.0.${{ github.run_number }}
-          IMAGE_NAME="jhonatancaldeira/dressing-virtuel"
+          IMAGE_NAME="jhonatancaldeira/dressing_virtuel_data_collector"
           docker push $IMAGE_NAME
