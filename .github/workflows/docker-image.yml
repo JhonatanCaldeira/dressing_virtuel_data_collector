@@ -1,18 +1,75 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
 jobs:
-  Explore-GitHub-Actions:
+  docker-compose-build:
     runs-on: ubuntu-latest
+    # container:
+    #   image: jhonatancaldeira/python-base:3.10
+
+    # services:
+    #   rabbitmq:
+    #     image: rabbitmq:3-management
+    #     ports:
+    #       - 5672:5672
+    #       - 15672:15672
+    #     options: >-
+    #       --health-cmd="rabbitmq-diagnostics -q ping"
+    #       --health-interval=10s
+    #       --health-timeout=5s
+    #       --health-retries=5
+
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Pass secrets as environment variables
         run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          mkdir config/
+          cd config/
+          echo "IMAGE_TMP_DIR=${{ secrets.IMAGE_TMP_DIR }}" >> .env
+          echo "IMAGE_STORAGE_DIR=${{ secrets.IMAGE_STORAGE_DIR }}" >> .env
+          echo "BROKER_SERVER=${{ secrets.BROKER_SERVER }}" >> .env
+          echo "PG_DB_HOST=${{ secrets.PG_DB_HOST }}" >> .env
+          echo "PG_DB_USER=${{ secrets.PG_DB_USER }}" >> .env
+          echo "PG_DB_PORT=${{ secrets.PG_DB_PORT }}" >> .env
+          echo "PG_DB_NAME=${{ secrets.PG_DB_NAME }}" >> .env
+          echo "PG_DB_PASSWORD=${{ secrets.PG_DB_PASSWORD }}" >> .env
+          echo "MODELS_API_KEY=${{ secrets.MODELS_API_KEY }}" >> .env
+          echo "MODELS_API_SERVER=${{ secrets.MODELS_API_SERVER }}" >> .env
+          echo "MODELS_API_PORT=${{ secrets.MODELS_API_PORT }}" >> .env
+          echo "MODELS_API_ENDPOINT=${{ secrets.MODELS_API_ENDPOINT }}" >> .env
+          echo "PG_API_ENDPONT=${{ secrets.PG_API_ENDPONT }}" >> .env
+          echo "PG_API_SERVER=${{ secrets.PG_API_SERVER }}" >> .env
+          echo "PG_API_PORT=${{ secrets.PG_API_PORT }}" >> .env
+          echo "PG_API_KEY=${{ secrets.PG_API_KEY }}" >> .env
+          echo "CELERY_API_ENDPONT=${{ secrets.CELERY_API_ENDPONT }}" >> .env
+          echo "CELERY_API_SERVER=${{ secrets.CELERY_API_SERVER }}" >> .env
+          echo "CELERY_API_PORT=${{ secrets.CELERY_API_PORT }}" >> .env
+          echo "CELERY_API_KEY=${{ secrets.CELERY_API_KEY }}" >> .env
+          echo "OBJ_DETECTION_MODEL_NAME=${{ secrets.OBJ_DETECTION_MODEL_NAME }}" >> .env
+          echo "CLASSIFICATION_MODEL_NAME=${{ secrets.CLASSIFICATION_MODEL_NAME }}" >> .env
+          echo "SEGMENTATION_MODEL_NAME=${{ secrets.SEGMENTATION_MODEL_NAME }}" >> .env
+
+      - name: Run docker-compose
+        uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: "./docker-compose.yml"
+
+      - name: Test Docker Compose
+        run: |
+          docker ps -a
+          docker-compose exec pytest tests/api_test.py || exit 1 # Run 
