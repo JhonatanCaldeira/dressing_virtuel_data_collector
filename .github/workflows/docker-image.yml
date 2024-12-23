@@ -62,7 +62,7 @@ jobs:
         run: | 
           echo ---Running test cases---
           docker ps -a
-          docker-compose exec models_api pytest tests/api_test.py 
+          docker compose exec models_api pytest tests/api_test.py 
           echo ---Completed test cases---  
 
       - name: Push Docker image to Docker Hub
