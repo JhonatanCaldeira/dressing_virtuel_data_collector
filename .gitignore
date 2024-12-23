@@ -163,7 +163,8 @@ cython_debug/
 
 # Image Directory
 media/
-images/
+image_scraper/images/
+image_gallery/images/
 config/
 tmp/
 offline_model/
