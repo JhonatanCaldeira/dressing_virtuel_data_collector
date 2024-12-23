@@ -12,8 +12,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    container:
-      image: jhonatancaldeira/python-base:3.10
+    # container:
+    #   image: jhonatancaldeira/python-base:3.10
 
     env:
       IMAGE_TMP_DIR: ${{ secrets.IMAGE_TMP_DIR }}
@@ -56,21 +56,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      # - name: Login to Docker Hub
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKER_USERNAME }}
-      #     password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # - name: Install dependencies
-      #   run: |
-      #     python -m pip install --upgrade pip
-      #     pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Start Celery Worker
         run: |
@@ -78,15 +78,15 @@ jobs:
 
       - name: Start FastAPI Server DB
         run: |
-          nohup uvicorn api.api_server_db:app --port ${{ secrets.PG_API_PORT }} > logs/api/api_server_db.log 2>&1 &
+          nohup uvicorn api.api_server_db:app --port ${{ secrets.PG_API_PORT }} >  ${{ github.repository }}/api_server_db.log 2>&1 &
 
       - name: Start FastAPI Models
         run: |
-          nohup uvicorn api.api_models:app --port ${{ secrets.MODELS_API_PORT }} > logs/api/api_models.log 2>&1 &
+          nohup uvicorn api.api_models:app --port ${{ secrets.MODELS_API_PORT }} >  ${{ github.repository }}/api_models.log 2>&1 &
 
       - name: Start FastAPI Celery
         run: |
-          nohup uvicorn api.api_celery:app --port ${{ secrets.CELERY_API_PORT }} > logs/api/api_celery.log 2>&1 &
+          nohup uvicorn api.api_celery:app --port ${{ secrets.CELERY_API_PORT }} >  ${{ github.repository }}/api_celery.log 2>&1 &
 
       - name: Pytest Test
         run: |
