@@ -55,7 +55,7 @@ jobs:
       - name: Build docker image
         run: |
           VERSION=1.0.${{ github.run_number }}
-          IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/dressing_virtuel_data_collector-models_api:$VERSION"
+          IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/dressing_virtuel_data_collector:$VERSION"
           echo ---Building docker image---
           docker build -t $IMAGE_NAME .
           echo ---Starting up docker---
@@ -71,6 +71,6 @@ jobs:
       - name: Push Docker image to Docker Hub
         run: |
           VERSION=1.0.${{ github.run_number }}
-          IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/dressing_virtuel_data_collector-models_api:$VERSION"
+          IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/dressing_virtuel_data_collector:$VERSION"
           echo ---Pushing Docker image---
           docker push $IMAGE_NAME
