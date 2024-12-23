@@ -68,5 +68,5 @@ jobs:
       - name: Push Docker image to Docker Hub
         run: |
           VERSION=1.0.${{ github.run_number }}
-          IMAGE_NAME="jhonatancaldeira/dressing_virtuel_data_collector"
+          IMAGE_NAME="jhonatancaldeira/dressing_virtuel_data_collector-models_api"
           docker push $IMAGE_NAME
