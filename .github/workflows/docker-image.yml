@@ -50,12 +50,14 @@ jobs:
           echo "CLASSIFICATION_MODEL_NAME=${{ secrets.CLASSIFICATION_MODEL_NAME }}" >> .env
           echo "SEGMENTATION_MODEL_NAME=${{ secrets.SEGMENTATION_MODEL_NAME }}" >> .env
           cat .env
+          pwd 
           cd ..
+          pwd
 
       - name: Build docker
         run: | 
           echo ---Building and starting up docker---
-          docker compose -f .docker-compose.yml up -d
+          docker compose -f docker-compose.yml up -d
           echo ---Containers up---
 
       - name: Run test
