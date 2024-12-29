@@ -14,6 +14,7 @@ from models.face_detection import face_detection_model
 from models.segmentation import segmentation_model
 from models.classification import classification_model
 from logger.logging_config import setup_logging
+from api.prometheus_metrics import PrometheusMetrics
 from utils import utils_image
 import os
 import json
@@ -62,6 +63,8 @@ except Exception as e:
 
 # API Instatiation
 app = FastAPI()
+metrics = PrometheusMetrics()
+metrics.setup(app)
 
 api_key_header = APIKeyHeader(name="access_token", auto_error=False)
 
@@ -69,6 +72,7 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
     if api_key_header == API_KEY:
         return api_key_header
     else:
+        logger.error(f"Could not validate API KEY")
         raise HTTPException(
             status_code=403, 
             detail="Could not validate API KEY"

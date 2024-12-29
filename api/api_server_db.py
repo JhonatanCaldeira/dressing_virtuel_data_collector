@@ -1,26 +1,24 @@
 from fastapi import Depends, FastAPI, HTTPException, Security, UploadFile, File, Form
 from fastapi.security.api_key import APIKey, APIKeyHeader
 from starlette.status import HTTP_403_FORBIDDEN
-from fastapi.responses import StreamingResponse
 from typing import Annotated
-
+from api.prometheus_metrics import PrometheusMetrics
 from sqlalchemy.orm import Session
 from database.connection import SessionLocal, engine
 from database import crud
 from schemas import schema
 import os
-import io
 import base64
-
 
 PREFIX = os.getenv("PG_API_ENDPONT")
 API_KEY = os.getenv("PG_API_KEY")
 
 # Initialize the FastAPI app
 app = FastAPI()
+metrics = PrometheusMetrics()
+metrics.setup(app)
 
 api_key_header = APIKeyHeader(name="access_token", auto_error=False)
-
 
 async def get_api_key(api_key_header: str = Security(api_key_header)):
     if api_key_header == API_KEY:
@@ -31,8 +29,6 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
         )
 
 # Dependency to get a database session for each request
-
-
 def get_db():
     """
     Provides a database session to interact with the database during the request lifecycle.

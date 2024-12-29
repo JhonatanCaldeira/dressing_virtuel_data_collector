@@ -4,6 +4,7 @@ from fastapi import (
     HTTPException, 
     Security
 )
+from api.prometheus_metrics import PrometheusMetrics
 from fastapi.security.api_key import APIKey, APIKeyHeader
 from schemas.schema import CeleryImageClassification
 from logger.logging_config import setup_logging
@@ -17,6 +18,8 @@ API_KEY = os.getenv("CELERY_API_KEY")
 TEMP_DIR = os.getenv("IMAGE_TMP_DIR")
 
 app = FastAPI()
+metrics = PrometheusMetrics()
+metrics.setup(app)
 
 api_key_header = APIKeyHeader(name="access_token", auto_error=False)
 
@@ -24,6 +27,7 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
     if api_key_header == API_KEY:
         return api_key_header
     else:
+        logger.error(f"Could not validate API KEY")
         raise HTTPException(
             status_code=403, 
             detail="Could not validate API KEY"
