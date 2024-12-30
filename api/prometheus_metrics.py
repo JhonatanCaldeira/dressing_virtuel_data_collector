@@ -13,6 +13,8 @@ class PrometheusMetrics:
         """
         Registers custom metrics to the Instrumentator.
         """
+        #instrumentator.add(metrics.default())
+
         # Collect average response times per endpoint
         instrumentator.add(
             lambda: metrics.latency(

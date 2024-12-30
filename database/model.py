@@ -159,3 +159,10 @@ class LogEntry(Base):
     created_at = Column(DateTime, default=datetime.now())
     level = Column(String)
     message = Column(String)
+
+class MetricEntry(Base):
+    __tablename__ = "tb_metrics"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, default=datetime.now())
+    name = Column(String)
+    value = Column(String)

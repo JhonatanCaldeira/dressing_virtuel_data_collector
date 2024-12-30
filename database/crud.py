@@ -441,3 +441,13 @@ def insert_log(db: Session, log: schema.Logger):
     db.refresh(db_log)
 
     return True
+
+def insert_metrics(db: Session, metrics: schema.Metrics):
+    db_metrics = model.MetricEntry(
+        name=metrics.name,
+        value=metrics.value)
+    db.add(db_metrics)
+    db.commit()
+    db.refresh(db_metrics)
+
+    return True

@@ -194,3 +194,7 @@ class CeleryImageClassification(BaseModel):
 class Logger(BaseModel):
     level: str
     message: str
+
+class Metrics(BaseModel):
+    name: str
+    value: str

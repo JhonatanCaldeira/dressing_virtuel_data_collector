@@ -3,6 +3,7 @@ from fastapi.security.api_key import APIKey, APIKeyHeader
 from starlette.status import HTTP_403_FORBIDDEN
 from typing import Annotated
 from api.prometheus_metrics import PrometheusMetrics
+from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy.orm import Session
 from database.connection import SessionLocal, engine
 from database import crud
@@ -15,6 +16,7 @@ API_KEY = os.getenv("PG_API_KEY")
 
 # Initialize the FastAPI app
 app = FastAPI()
+#Instrumentator().instrument(app).expose(app)
 metrics = PrometheusMetrics()
 metrics.setup(app)
 
