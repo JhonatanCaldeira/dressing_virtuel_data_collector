@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM jhonatancaldeira/python-base:3.10
+FROM jhonatancaldeira/python-base:latest
 
 # Install supervisord
 RUN apt-get update && apt-get install -y supervisor
