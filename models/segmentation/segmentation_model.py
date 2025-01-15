@@ -1,6 +1,7 @@
 from transformers import SegformerImageProcessor, AutoModelForSemanticSegmentation
 from PIL import Image
 from utils import utils_image
+import rembg
 import torch.nn as nn
 import torch
 import numpy as np
@@ -134,7 +135,7 @@ class SegmentationModel():
 
         # Open the original image
         return_images = []
-        image = Image.open(image_to_segment)    
+        image = self.remove_background(Image.open(image_to_segment))    
 
         for label in unique_labels:
             # Skip labels that are not in the valid_labels list
@@ -154,10 +155,17 @@ class SegmentationModel():
 
             # Crop the original image using the calculated bounding box limits
             cropped_image = image.crop((min_x, min_y, max_x, max_y))
+
             return_images.append(utils_image.convert_pil_to_base64(cropped_image))
 
         response = {"images": return_images}
         return response 
+
+    def remove_background(self, image: Image):
+        input_array = np.array(image)
+        output_array = rembg.remove(input_array)
+        return Image.fromarray(output_array)
+
 
     def crop_clothes(self, image_to_segment: str):
         """

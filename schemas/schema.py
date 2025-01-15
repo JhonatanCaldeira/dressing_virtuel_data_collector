@@ -190,6 +190,17 @@ class CeleryImageClassification(BaseModel):
     id: int
     images: List[str]
 
+class CelerySuggestion(BaseModel):
+    client_id: int
+    date: str
+    address: str
+    upperbody_only: bool
+
+class CelerySuggestionResp(BaseModel):
+    date: str
+    address: str
+    temperature: float
+    suggestion: List[str]
 
 class Logger(BaseModel):
     level: str

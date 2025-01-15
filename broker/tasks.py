@@ -7,6 +7,8 @@ from database import crud
 from sqlalchemy.orm import Session
 from schemas.schema import ImageProduct
 from logger.logging_config import setup_logging
+from requests.auth import HTTPBasicAuth
+from requests.exceptions import HTTPError
 import requests
 import json
 import os
@@ -33,6 +35,16 @@ ENDPOINT = os.getenv("MODELS_API_ENDPOINT")
 MODELS_URI = f"http://{SERVER}:{PORT}/{ENDPOINT}"
 MODELS_API_KEY = os.getenv("MODELS_API_KEY")
 HEADER = {"access_token": MODELS_API_KEY }
+
+# METEO API
+METEO_URI_TOKEN = os.getenv("METEO_URI_TOKEN")
+METEO_URI_API = os.getenv("METEO_API_ENDPOINT")
+METEO_USER = os.getenv("METEO_API_USER")
+METEO_PASSWORD = os.getenv("METEO_API_PASSWORD")
+
+#GEO API
+GEOCO_API_ENDPOINT = os.getenv("GEOCO_API_ENDPOINT")
+GEOCO_API_KEY = os.getenv("GEOCO_API_KEY")
 
 logger = setup_logging(__name__)
 
@@ -264,3 +276,46 @@ def get_faceid(client_id):
                              headers=header)
     
     return response
+
+@app.task
+def get_lat_long(address):
+    response = requests.get(f"{GEOCO_API_ENDPOINT}search?q={address},&api_key={GEOCO_API_KEY}")
+
+    if response.status_code == 200:
+        return {'lat':response.json()[0]['lat'], 
+                'long':response.json()[0]['lon']}
+    else:
+        raise HTTPError(
+                status_code=403, 
+                detail="Could not get Latitude and Longitude"
+            )
+
+@app.task
+def get_meteo(datetime, lat, long, parameters = 't_2m:C', format = 'json'):
+    response = requests.get(METEO_URI_TOKEN, 
+                            auth=HTTPBasicAuth(METEO_USER, METEO_PASSWORD))
+
+    if response.status_code == 200:
+        access_token = response.json()['access_token']
+    else:
+        raise HTTPError(
+                status_code=403, 
+                detail="Could not validate API KEY"
+            )
+
+    # datetime = '2025-01-16T12:00:00Z'
+    # lat = '43.5298424'
+    # long = '5.4474738'
+    locations = f'{lat},{long}'
+
+    url = f'{METEO_URI_API}/{datetime}/{parameters}/{locations}/{format}'
+    header = {'Authorization':f'Bearer {access_token}'}
+    response = requests.get(url, headers=header)
+
+    if response.status_code == 200:
+        return response
+    else:
+        raise HTTPError(
+                status_code=403, 
+                detail="Could not get Meteo data"
+            )
