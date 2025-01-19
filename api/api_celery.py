@@ -6,7 +6,7 @@ from fastapi import (
 )
 from api.prometheus_metrics import PrometheusMetrics
 from fastapi.security.api_key import APIKey, APIKeyHeader
-from schemas.schema import CeleryImageClassification
+from schemas.schema import CeleryImageClassification, CelerySuggestion
 from logger.logging_config import setup_logging
 from broker import tasks
 import os
@@ -52,3 +52,32 @@ async def task_image_classification(request: CeleryImageClassification,
     logger.info("Finished task_image_classification")
     
     return True
+
+@app.get(f"/{PREFIX}/get_suggestions")
+async def get_suggestions(request: CelerySuggestion,
+                          api_key: APIKey = Depends(get_api_key)):
+    logger.info("Starting get_suggestions")
+    logger.info("Getting Lat and Long from Address")
+
+    response = tasks.get_lat_long(request.address)
+
+    if response is None:
+        raise HTTPException(
+            status_code=403, 
+            detail="Could not get Latitude and Longitude"
+        )
+
+    datetime = request.date + 'T12:00:00Z'
+    lat = response['lat']
+    long = response['long']
+
+    logger.info("Getting Meteo")
+    response = tasks.get_meteo(datetime,lat,long)
+
+    if response is None:
+        raise HTTPException(
+            status_code=403, 
+            detail="Could not get Meteo data"
+        )
+
+    return response

@@ -17,6 +17,7 @@ class Color(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50))
+    rgb = Column(String(20))
 
 class Gender(Base):
     """

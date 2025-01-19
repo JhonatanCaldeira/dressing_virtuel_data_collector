@@ -11,6 +11,7 @@ class Color(BaseModel):
     """
     id: int|None
     name: str
+    rgb: str
 
 class Season(BaseModel):
     """
@@ -148,6 +149,7 @@ class ImageProductDetailed(BaseModel):
     path: str
     gender: str
     color: str
+    color_rgb: str
     season: str
     article: str
     category: str

@@ -278,6 +278,7 @@ def get_images_and_categories(db: Session, skip: int = 0, limit: int = 100):
                 model.ImageProduct.path,
                 model.Gender.gender,
                 model.Color.name.label('color'),
+                model.Color.rgb.label('color_rgb'),
                 model.Season.name.label('season'),
                 model.ArticleType.name.label('article'),
                 model.Category.name.label('category'),
@@ -317,6 +318,7 @@ def get_images_from_user(db: Session, client_id: int,
                 model.ImageProduct.path,
                 model.Gender.gender,
                 model.Color.name.label('color'),
+                model.Color.rgb.label('color_rgb'),
                 model.Season.name.label('season'),
                 model.ArticleType.name.label('article'),
                 model.Category.name.label('category'),
@@ -352,7 +354,7 @@ def create_color(db: Session, color: schema.Color):
     Returns:
         Color: The created Color object.
     """
-    db_color = model.Color(name=color.name)
+    db_color = model.Color(name=color.name, rgb=color.rgb)
     db.add(db_color)
     db.commit()
     db.refresh(db_color)
@@ -433,6 +435,16 @@ def get_faceid(db: Session, id_client: int):
     return db_client[0]
 
 def insert_log(db: Session, log: schema.Logger):
+    """
+    Insert a log entry into the database.
+
+    Args:
+        db (Session): Database session.
+        log (schema.Logger): Log entry to be inserted.
+
+    Returns:
+        bool: True if inserted successfully, False otherwise.
+    """
     db_log = model.LogEntry(
         level=log.level,
         message=log.message)

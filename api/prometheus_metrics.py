@@ -13,24 +13,23 @@ class PrometheusMetrics:
         """
         Registers custom metrics to the Instrumentator.
         """
-        #instrumentator.add(metrics.default())
-
         # Collect average response times per endpoint
         instrumentator.add(
-            lambda: metrics.latency(
+            metrics.latency(
                 metric_name="http_request_duration_seconds",
-                labels={"handler": lambda request: request.scope.get("path", "unknown")},
+                metric_doc="Duration of HTTP requests in seconds",
             )
         )
         # Error counter
         instrumentator.add(
-            lambda: metrics.default(
+            metrics.requests(
                 metric_name="http_errors_total",
-                documentation="Total HTTP errors",
-                labels={"handler": lambda request: request.scope.get("path", "unknown")},
+                metric_doc="Total HTTP errors",
             )
         )
         return instrumentator
+
+
 
     def setup(self, app: FastAPI):
         """
