@@ -54,30 +54,51 @@ async def task_image_classification(request: CeleryImageClassification,
     return True
 
 @app.get(f"/{PREFIX}/get_suggestions")
-async def get_suggestions(request: CelerySuggestion,
+async def get_suggestions(request: CelerySuggestion = Depends(),
                           api_key: APIKey = Depends(get_api_key)):
     logger.info("Starting get_suggestions")
-    logger.info("Getting Lat and Long from Address")
 
-    response = tasks.get_lat_long(request.address)
+    response = None
+    temperature = None
+    # Get temperature if season not provided
+    if request.season is None:
+        logger.info("Getting Lat and Long from Address")
+        response = tasks.get_lat_long(request.address)
 
-    if response is None:
+        if response is None:
+            raise HTTPException(
+                status_code=403, 
+                detail="Could not get Latitude and Longitude"
+            )
+
+        datetime = request.date + 'T12:00:00Z'
+        lat = response['lat']
+        long = response['long']
+
+        logger.info("Getting Meteo")
+        response = tasks.get_meteo(datetime,lat,long)
+
+        if response is None:
+            raise HTTPException(
+                status_code=403, 
+                detail="Could not get Meteo data"
+            )
+
+        temperature = response.json()['data'][0]['coordinates'][0]['dates'][0]['value']
+
+    logger.info("Getting Suggestions")
+    response = tasks.get_cloth_suggestion(request.client_id,
+                                           request.season,
+                                           temperature,
+                                           request.usage_type,
+                                           request.id_top,
+                                           request.id_bottom)
+    if response.status_code != 200:
         raise HTTPException(
             status_code=403, 
-            detail="Could not get Latitude and Longitude"
+            detail="Could not get Suggestions"
         )
 
-    datetime = request.date + 'T12:00:00Z'
-    lat = response['lat']
-    long = response['long']
-
-    logger.info("Getting Meteo")
-    response = tasks.get_meteo(datetime,lat,long)
-
-    if response is None:
-        raise HTTPException(
-            status_code=403, 
-            detail="Could not get Meteo data"
-        )
+    logger.info("Finished get_suggestions")
 
     return response

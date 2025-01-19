@@ -167,3 +167,12 @@ class MetricEntry(Base):
     created_at = Column(DateTime, default=datetime.now())
     name = Column(String)
     value = Column(String)
+
+class OutfitSuggestion(Base):
+    __tablename__ = "tb_outfitsuggestions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, default=datetime.now())
+    id_client = Column(Integer, ForeignKey("tb_client.id"))
+    id_topewear = Column(Integer, ForeignKey("tb_imageproduct.id"))
+    id_bottomwear = Column(Integer, ForeignKey("tb_imageproduct.id"))
+    client = relationship("Client")

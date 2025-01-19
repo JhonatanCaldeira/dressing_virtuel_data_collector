@@ -1,7 +1,9 @@
 from colorsys import rgb_to_hsv
+from http.client import HTTPResponse
 from celery import Celery
 from PIL import Image
 from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 from utils import utils_image
 from dotenv import load_dotenv
 from database.connection import SessionLocal
@@ -562,9 +564,9 @@ def get_cloth_suggestion(id_client, season=None, temperature=None,
         if len(ds_matching) != 0:
             new_matching = {}
             if subcaterogy_to_search == 'Topwear':
-                new_matching = {'id_top': id_image, 'id_bottom': ds_matching['id'].values[0]}
+                new_matching = {'id_top': int(id_image), 'id_bottom': int(ds_matching['id'].values[0])}
             else:
-                new_matching = {'id_bottom': id_image, 'id_top': ds_matching['id'].values[0]}
+                new_matching = {'id_top': int(ds_matching['id'].values[0]), 'id_bottom': int(id_image)}
 
             matchs['matchs'].append(new_matching)
 
@@ -574,7 +576,9 @@ def get_cloth_suggestion(id_client, season=None, temperature=None,
             detail="No matching found"
         )
 
-    return matchs
+    return JSONResponse(
+        content=matchs, status_code=200, media_type="application/json"
+    ) if matchs else JSONResponse(content="No matches found", status_code=404) 
 
 def define_season(season, temperature):
     if season:

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator, root_validator
 from typing import List
 
 class Color(BaseModel):
@@ -191,12 +191,16 @@ class ClientAuthResp(BaseModel):
 class CeleryImageClassification(BaseModel):
     id: int
     images: List[str]
-
+    
 class CelerySuggestion(BaseModel):
     client_id: int
-    date: str
-    address: str
-    upperbody_only: bool
+    date: None | str = Field(default=None)
+    address: None | str = Field(default=None)
+    season: None | str = Field(default=None)
+    usage_type: None | str = Field(default=None)
+    id_top: None | int = Field(default=None)
+    id_bottom: None | int = Field(default=None)
+    n_suggestions: None | int = Field(default=None)
 
 class CelerySuggestionResp(BaseModel):
     date: str
