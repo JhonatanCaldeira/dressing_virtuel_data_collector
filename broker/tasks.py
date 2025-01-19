@@ -544,6 +544,14 @@ def get_cloth_suggestion(id_client, season=None, temperature=None,
         random_match = True
 
     matchs = {'id_client': id_client, 'matchs': []}
+    if temperature is not None:
+        matchs['temperature'] = temperature
+
+    if len(ds) == 0:
+        raise HTTPException(
+            status_code=403,
+            detail="No clothes fully matching the criteria"
+        )
 
     # Generate clothing suggestions
     for _ in range(n_suggestions):
@@ -563,7 +571,7 @@ def get_cloth_suggestion(id_client, season=None, temperature=None,
 
         if len(ds_matching) != 0:
             new_matching = {}
-            if subcaterogy_to_search == 'Topwear':
+            if subcaterogy_to_search == 'Bottomwear':
                 new_matching = {'id_top': int(id_image), 'id_bottom': int(ds_matching['id'].values[0])}
             else:
                 new_matching = {'id_top': int(ds_matching['id'].values[0]), 'id_bottom': int(id_image)}
