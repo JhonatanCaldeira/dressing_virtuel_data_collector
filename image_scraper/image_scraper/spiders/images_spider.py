@@ -15,13 +15,12 @@ class ImagesSpider(scrapy.Spider):
         Yields:
             ImageScraperItem: An item containing image data including category and image URL.
         """
-        # Extract image details from each image card on the page
         for image in response.css('div.image-card'):
 
             item = ImageScraperItem()
             item['category'] = image.css('p::text').get() 
-            relative_image = image.css('img::attr(src)').get() # Extracts the relative image URL
-            item['image_urls'] =  [response.urljoin(relative_image)] # Constructs the absolute URL
+            relative_image = image.css('img::attr(src)').get() 
+            item['image_urls'] =  [response.urljoin(relative_image)] 
 
             yield item
 

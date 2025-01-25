@@ -571,6 +571,7 @@ def get_cloth_suggestion(id_client, season=None, temperature=None,
 
         if len(ds_matching) != 0:
             new_matching = {}
+            ds_matching = ds_matching.sample(n=1)
             if subcaterogy_to_search == 'Bottomwear':
                 new_matching = {'id_top': int(id_image), 'id_bottom': int(ds_matching['id'].values[0])}
             else:
