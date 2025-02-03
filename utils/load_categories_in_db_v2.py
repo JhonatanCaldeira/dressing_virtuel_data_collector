@@ -4,7 +4,6 @@ from database.model import (ArticleType,
                             Category, 
                             Color, 
                             Gender, 
-                            ImageProduct, 
                             Season, 
                             SubCategory, 
                             UsageType, 
@@ -14,11 +13,19 @@ from sqlalchemy_utils import database_exists, drop_database, create_database
 import yaml
 import pandas as pd
 
-FASHION_DATASET_HOME = '/mnt/e/jhona/Documents/Estudo/AI Microsfot & Simplon.co/Projet_chef_doeuvre/fashion_dataset/fashion-dataset/'
+FASHION_DATASET_HOME = 'fashion_dataset/fashion-dataset/'
 dataset_file = 'styles.csv'
 
-
 def load_config(filepath='config/config.yaml'):
+    """
+    Load the database configuration from a YAML file.
+
+    Args:
+        filepath (str): Path to the YAML configuration file.
+
+    Returns:
+        dict: Database configuration dictionary with keys such as user, password, host, port, and dbname.
+    """
     with open(filepath, 'r') as file:
         config = yaml.safe_load(file)
     return config['database']
@@ -29,17 +36,59 @@ connection = f"{db_config['user']}:{db_config['password']}@{db_config['host']}:{
 engine = create_engine(f"postgresql://{connection}")
 
 def recreate_db():
+    """
+    Recreate the database by dropping it if it exists and then creating it again.
+    Also creates all tables defined in the Base metadata.
+    """
     if database_exists(engine.url):
         drop_database(engine.url)
 
     # Database creation
     create_database(engine.url)
-    print("was it create? ", database_exists(engine.url))
+    print("Database created?", database_exists(engine.url))
 
     # Tables creation
     Base.metadata.create_all(engine)
 
+def clean_data(df):
+    """
+    Clean the dataset by performing the following operations:
+    - Removing rows with missing or corrupted entries in essential columns.
+    - Normalizing date formats and text formats.
+    - Dropping any remaining rows with invalid or corrupted data.
+
+    Args:
+        df (pd.DataFrame): The dataset to be cleaned.
+
+    Returns:
+        pd.DataFrame: The cleaned dataset.
+    """
+    # Drop rows with missing essential columns
+    essential_columns = ['gender', 'masterCategory', 'subCategory', 'articleType', 'baseColour', 'season', 'usage']
+    df = df.dropna(subset=essential_columns)
+
+    # Normalize date formats (if applicable)
+    if 'dateAdded' in df.columns:
+        df['dateAdded'] = pd.to_datetime(df['dateAdded'], errors='coerce')
+
+    # Homogenize text data (e.g., lowercase, remove extra spaces)
+    for column in essential_columns:
+        if column in df.columns:
+            df[column] = df[column].str.strip().str.lower()
+
+    # Remove entries with invalid or corrupted data
+    df = df.dropna()  # Re-drop rows after normalization
+
+    return df
+
 def load_dataframe(df, header):
+    """
+    Load a specific category of data into the database.
+
+    Args:
+        df (list or ndarray): The data to be loaded.
+        header (str): The header or category name (e.g., 'gender', 'baseColour').
+    """
     Session = sessionmaker(bind=engine)
     session = Session()
 
@@ -65,7 +114,6 @@ def load_dataframe(df, header):
                 name = item
             )
         elif header == 'subCategory':
-            print(item)
             query = session.query(
                 Category.id
             ).filter_by(name = item[1][0]).first()
@@ -93,7 +141,6 @@ def load_dataframe(df, header):
         else:
             continue
 
-        print(new_item)
         session.add(new_item)
 
     session.commit()
@@ -103,26 +150,24 @@ recreate_db()
 
 headers = ['gender','masterCategory','subCategory','articleType','baseColour','season','usage']
 
-# Load Dataframe
+# Load and clean DataFrame
 df = pd.read_csv(FASHION_DATASET_HOME + dataset_file, on_bad_lines='skip')
+df = clean_data(df)
 
-# Loop for each category to remove duplicate and store it in the DB
+# Loop for each category to remove duplicates and store it in the DB
 for header in headers:
     if header not in ['masterCategory','subCategory','articleType']:
         categories = list(set(df[header].dropna()))
     else:
         if header == 'masterCategory':
-            df_filtred = df.query("(masterCategory == 'Apparel' or masterCategory == 'Accessories' or masterCategory == 'Footwear')")
-            categories = list(set(df_filtred['masterCategory']))
+            df_filtered = df.query("(masterCategory == 'apparel' or masterCategory == 'accessories' or masterCategory == 'footwear')")
+            categories = list(set(df_filtered['masterCategory']))
         elif header == 'subCategory':
-            df_filtred = df.query("(masterCategory == 'Apparel' or masterCategory == 'Accessories' or masterCategory == 'Footwear')")
-            categories = df_filtred.groupby(['subCategory'])['masterCategory'].apply(lambda x: list(set(x))).reset_index().to_numpy()
+            df_filtered = df.query("(masterCategory == 'apparel' or masterCategory == 'accessories' or masterCategory == 'footwear')")
+            categories = df_filtered.groupby(['subCategory'])['masterCategory'].apply(lambda x: list(set(x))).reset_index().to_numpy()
         elif header == 'articleType':
-            df_filtred = df.query("(masterCategory == 'Apparel' or masterCategory == 'Accessories' or masterCategory == 'Footwear')")
-            categories = df_filtred.groupby(['articleType'])['subCategory'].apply(lambda x: list(set(x))).reset_index().to_numpy()
+            df_filtered = df.query("(masterCategory == 'apparel' or masterCategory == 'accessories' or masterCategory == 'footwear')")
+            categories = df_filtered.groupby(['articleType'])['subCategory'].apply(lambda x: list(set(x))).reset_index().to_numpy()
         else:
             continue
     load_dataframe(categories, header)
-
- 
-
