@@ -3,6 +3,7 @@ FROM jhonatancaldeira/python-base:latest
 
 # Install supervisord
 RUN apt-get update && apt-get install -y supervisor
+RUN apt-get update && apt-get install -y libgl1-mesa-glx
 RUN mkdir -p /var/log && chmod -R 777 /var/log
 
 # Set the working directory in the container to /app
