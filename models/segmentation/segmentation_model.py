@@ -18,7 +18,16 @@ class SegmentationModel():
         self.set_image_temporary_directory(temp_dir)
 
     def load_model(self, model_name: str):
-        # Load the image processor and the pre-trained model for semantic segmentation
+        """
+        Loads a pre-trained Segformer model and its corresponding image processor
+
+        Args:
+            model_name (str): The name of the pre-trained model to load
+
+        Returns:
+            tuple: A tuple containing the image processor, the pre-trained model,
+                and the device (either GPU or CPU) to use for inference
+        """
         processor = SegformerImageProcessor.from_pretrained(model_name)
         model = AutoModelForSemanticSegmentation.from_pretrained(model_name)
 
@@ -162,10 +171,18 @@ class SegmentationModel():
         return response 
 
     def remove_background(self, image: Image):
+        """
+        Removes the background from the given image using the rembg library.
+
+        Args:
+            image (Image): The input image from which the background will be removed.
+
+        Returns:
+            Image: The image with the background removed.
+        """
         input_array = np.array(image)
         output_array = rembg.remove(input_array)
         return Image.fromarray(output_array)
-
 
     def crop_clothes(self, image_to_segment: str):
         """

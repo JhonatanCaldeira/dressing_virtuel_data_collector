@@ -1,9 +1,6 @@
 from transformers import DetrImageProcessor, DetrForObjectDetection
 from PIL import Image
 import torch
-import os
-import base64
-import io
 from utils import utils_image
 
 class ObjectDetection:
@@ -30,6 +27,20 @@ class ObjectDetection:
         self.__temp_dir = temp_dir
 
     def detection(self, image_base64: str, category_to_detect: str):
+        """
+        Perform object detection on an image.
+
+        Parameters
+        ----------
+        image_base64 : str
+            The image to perform object detection on, as a base64 encoded string.
+        category_to_detect : str
+            The category to detect in the image. If the category is not detected, an empty list is returned.
+
+        Returns
+        -------
+        A dictionary with a single key "images", which contains a list of base64 encoded images, each containing the detected object.
+        """
         processor = self.processor
         model = self.model
         device = self.device
