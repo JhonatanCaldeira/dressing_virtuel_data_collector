@@ -11,6 +11,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -22,3 +24,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  postgres:
+    image: jhonatancaldeira/postgres_dressing-virtuel:latest
+    ports:
+      - 5432:5432
