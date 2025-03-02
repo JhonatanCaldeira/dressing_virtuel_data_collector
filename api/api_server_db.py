@@ -268,6 +268,28 @@ def get_article_types(skip: int = 0, limit: int = 100,
     article_types = crud.get_article_types(db, skip=skip, limit=limit)
     return article_types
 
+@app.get(f"/{PREFIX}/article_types_by_category/", response_model=list[schema.ArticleType])
+def get_article_types_by_category(category_id: int, skip: int = 0, limit: int = 100,
+                      db: Session = Depends(get_db),
+                      api_key: APIKey = Depends(get_api_key)):
+    """
+    Retrieve a list of article types from the database.
+    Args:
+        category_id (int): The ID of the category to retrieve article types for.
+        skip (int): The number of records to skip. Defaults to 0.
+        limit (int): The maximum number of records to return. Defaults to 100.
+        db (Session): The SQLAlchemy database session.
+        api_key (APIKey): The API Key for authentication.
+
+    Returns:
+        list[ArticleType]: A list of ArticleType objects.
+    """
+    article_types = crud.get_article_types_by_categories(db,
+                                                         category_id=category_id, 
+                                                         skip=skip, 
+                                                         limit=limit)
+    return article_types
+
 
 @app.post(f"/{PREFIX}/import_image/", response_model=schema.ImageProduct)
 def create_image_product(image: schema.ImageProduct,

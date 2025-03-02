@@ -181,7 +181,7 @@ class SegmentationModel():
             Image: The image with the background removed.
         """
         input_array = np.array(image)
-        output_array = rembg.remove(input_array)
+        output_array = rembg.remove(input_array, bgcolor=(255, 255, 255, 255))
         return Image.fromarray(output_array)
 
     def crop_clothes(self, image_to_segment: str):

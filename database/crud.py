@@ -245,6 +245,26 @@ def get_article_types(db: Session, skip: int = 0, limit: int = 200):
     """
     return db.query(model.ArticleType).offset(skip).limit(limit).all()
 
+def get_article_types_by_categories(db: Session, 
+                                    category_id: int = None,
+                                    skip: int = 0, 
+                                    limit: int = 200):
+    """
+    Retrieves a list of article types from the database with pagination.
+
+    Args:
+        db (Session): The SQLAlchemy database session.
+        skip (int): The number of records to skip (for pagination).
+        limit (int): The maximum number of records to return.
+
+    Returns:
+        list[ArticleType]: A list of ArticleType objects.
+    """
+    return db.query(model.ArticleType
+                    ).join(model.SubCategory, 
+                           model.SubCategory.id == model.ArticleType.id_subcategory
+                           ).filter(model.SubCategory.id_category == category_id
+                                    ).offset(skip).limit(limit).all()
 
 def get_images(db: Session, skip: int = 0, limit: int = 100):
     """

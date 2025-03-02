@@ -107,7 +107,10 @@ def identify_clothes(id_client, image_paths):
     dict_seasons = get_categories('seasons','name')
     dict_colors = get_categories('colors','name')
     dict_usage = get_categories('usage_types','name')
-    dict_article = get_categories('article_types','name')
+    dict_article = get_categories('article_types_by_category',
+                                  'name',
+                                  'category_id',
+                                  3)
 
     dict_of_dict_categories = {
         'id_gender': dict_genders,
@@ -204,16 +207,16 @@ def identify_clothes(id_client, image_paths):
                 new_image_product = crud.create_image_product(next(get_db()),
                                                               ImageProduct(**image_product))
                 
-        # Remove tmp images
-        for image_path in image_paths:
-            os.remove(image_path)
+    # Remove tmp images
+    for image_path in image_paths:
+        os.remove(image_path)
 
     logger.debug(f"Task completed for client ID: {id_client}")
     #Add function to alert the client by mail
     return True
 
 @app.task
-def get_categories(method, key):
+def get_categories(method, key, filter_field = None, filter_value = None):
     """
     Fetches categories (like gender, color, season, etc.) from the API.
 
@@ -226,7 +229,10 @@ def get_categories(method, key):
         corresponding IDs as values.
     """
     header = {"access_token":PG_API_KEY}
-    response = requests.get(f"{PG_URI}/{method}",headers=header)
+    if filter_field and filter_value:
+        response = requests.get(f"{PG_URI}/{method}?{filter_field}={filter_value}",headers=header)
+    else:
+        response = requests.get(f"{PG_URI}/{method}",headers=header)
     dict = {x[key]: x['id'] for x in response.json()}
 
     return dict

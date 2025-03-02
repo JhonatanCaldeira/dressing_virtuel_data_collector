@@ -49,6 +49,12 @@ jobs:
           echo "OBJ_DETECTION_MODEL_NAME=${{ secrets.OBJ_DETECTION_MODEL_NAME }}" >> .env
           echo "CLASSIFICATION_MODEL_NAME=${{ secrets.CLASSIFICATION_MODEL_NAME }}" >> .env
           echo "SEGMENTATION_MODEL_NAME=${{ secrets.SEGMENTATION_MODEL_NAME }}" >> .env
+          echo "METEO_URI_TOKEN=${{ secrets.METEO_URI_TOKEN }}" >> .env
+          echo "METEO_API_ENDPOINT=${{ secrets.METEO_API_ENDPOINT }}" >> .env
+          echo "METEO_API_USER=${{ secrets.METEO_API_USER }}" >> .env
+          echo "METEO_API_PASSWORD=${{ secrets.METEO_API_PASSWORD }}" >> .env
+          echo "GEOCO_API_ENDPOINT=${{ secrets.GEOCO_API_ENDPOINT }}" >> .env
+          echo "GEOCO_API_KEY=${{ secrets.GEOCO_API_KEY }}" >> .env
           cat .env
           cd ..
 
