@@ -1,86 +1,148 @@
 # Dressing Virtuel
 
-Dressing Virtuel is a comprehensive solution for managing and evaluating fashion product images. The architecture includes several components, such as an API server, a CLIP model for image evaluation, an image scraper, and a Django application for managing and displaying images.
+## Table des Matières
 
-## Components
+- [Description du Projet](#description-du-projet)
+- [Fonctionnalités](#fonctionnalités)
+- [Installation](#installation)
+- [Configuration des Variables d'Environnement](#configuration-des-variables-denvironnement)
+- [API Reference](#api-reference)
+- [Contribution](#contribution)
+- [Licence](#licence)
+- [Auteurs](#auteurs)
+- [Remerciements](#remerciements)
 
-### 1. API Server (`api` folder)
-A FastAPI-based server providing endpoints for managing fashion product attributes, including colors, seasons, genders, and more.
+---
 
-### 2. CLIP Model (`clip_model` folder)
-Scripts for evaluating product images using a CLIP model. This model processes images and text descriptions to identify the most likely categories for each image.
+## Description du Projet
 
-### 3. Database Configuration (`database` folder)
-SQLAlchemy models and CRUD operations for interacting with a PostgreSQL database. Configuration is managed via a YAML file.
+Dressing Virtuel est une application permettant de stocker et organiser des photos de tous les vêtements d'un utilisateur. Cela permet un accès rapide à sa collection de vêtements sans avoir besoin de se rendre physiquement à son dressing.
 
-### 4. Image Gallery (`image_gallery` folder)
-A Django application that serves as a web interface for managing and displaying images. Includes models, views, and templates.
+En plus de cet accès simplifié, l'application propose des suggestions de tenues en fonction de l'occasion (réunion, sortie, week-end, etc.).
 
-### 5. Image Scraper (`image_scraper` folder)
-A Scrapy spider that scrapes images from a webpage, downloads them, and stores metadata in a SQLite database.
+### Pourquoi Dressing Virtuel ?
 
-### 6. Utilities (`app.py`, `import_images.py`, `manage.py`)
-Various utility scripts for managing and executing different parts of the project.
+Contrairement à d'autres applications similaires, Dressing Virtuel ne requiert pas de prendre des photos de chaque vêtement individuellement. Son moteur **I2C1 (Image to Clothes v1)** utilise la vision par ordinateur pour extraire automatiquement les vêtements à partir de photos existantes (ex: Google Photos) et les classifier intelligemment.
+
+### Engagement contre le Fast Fashion
+
+Dressing Virtuel aide à lutter contre la surconsommation vestimentaire en offrant un inventaire digitalisé des vêtements. Cela permet à l'utilisateur de vérifier s'il possède déjà un article avant d'en acheter un nouveau. De futures fonctionnalités permettront aussi d'identifier les vêtements peu utilisés pour favoriser la revente ou le don.
+
+---
+
+## Fonctionnalités
+
+- **Ajout automatique de vêtements** à partir de photos existantes
+- **Classification intelligente** des vêtements
+- **Suggestions de tenues** en fonction de l'occasion
+- **Recherche et filtre avancés** pour retrouver un vêtement
+- **Prise en charge des métadonnées** pour l'analyse de l'utilisation des vêtements
+- **Gestion et synchronisation avec Google Photos** (futur)
+
+---
 
 ## Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/yourusername/dressing_virtuel.git
-   cd dressing_virtuel
-    ```
+1. **Installer Python 3.10**
+2. **Installer Git ou GitHub Desktop**
+3. **Cloner le dépôt** dans un répertoire local :
+   ```sh
+   git clone https://github.com/JhonatanCaldeira/dressing_virtuel_data_collector.git ./
+   ```
+4. **Configurer l'environnement virtuel** :
+   ```sh
+   python -m venv .venv
+   ```
+5. **Activer l'environnement virtuel** :
+   ```sh
+   source .venv/bin/activate  # Linux/macOS
+   .venv\Scripts\activate     # Windows
+   ```
+6. **Installer les dépendances** :
+   ```sh
+   pip install -r requirements.txt
+   ```
+7. **Démarrer les services** :
+   ```sh
+   ./api.sh all start
+   ```
 
-2. **Install dependencies:**
+---
 
-- Create and activate a virtual environment.
-- Install Python dependencies:
+## Configuration des Variables d'Environnement
 
-```
-bash
-pip install -r requirements.txt
-```
+Avant de lancer l'application, assurez-vous de configurer les variables d'environnement dans `config/.env` :
 
-3. **Set up the database:**
+Exemple minimal :
 
-- Ensure PostgreSQL is running and accessible.
-- Update config/config.yaml with your database credentials.
-- Run migrations if necessary (for Django).
+```ini
+# Dossiers de stockage
+IMAGE_TMP_DIR=./tmp
+IMAGE_STORAGE_DIR=./storage
 
-4. **Run the API Server:**
-```
-bash
-uvicorn api.api_server:app --reload
-```
-
-5. **Run the Django Application:**
-```
-bash
-python image_gallery/manage.py runserver
-```
-
-6. **Run the Image Scraper:**
-```
-bash
-cd image_scraper
-scrapy crawl images
-```
-
-7. **Evaluate Images with CLIP:**
-```
-bash
-python clip_model/product_evaluation.py
+# PostgreSQL
+PG_DB_HOST=localhost
+PG_DB_PORT=5432
+PG_DB_NAME=db_dressing_virtuel
+PG_DB_USER=admin
+PG_DB_PASSWORD=your_password
 ```
 
-## Configuration
-- API Server Configuration: Modify config/config.yaml to update database settings and other configurations.
-- Django Settings: Adjust image_gallery/settings.py for Django-specific settings.
-- Scrapy Settings: Customize image_scraper/settings.py as needed.
+La liste complète des variables est disponible dans [`config/.env.example`](config/.env.example).
 
-## Usage
-- API Endpoints: Access the API at http://localhost:8000 for CRUD operations on fashion attributes.
-- Image Gallery: Visit http://localhost:8000/image_gallery/ to view and manage images.
-- Image Scraping: Use the Scrapy spider to scrape new images.
-- Image Evaluation: Run the CLIP model to evaluate images and update the database with predictions.
+---
 
-## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+## API Reference
+
+Une fois les services démarrés, voici les principaux endpoints disponibles :
+
+| Service                | Endpoint                                         |
+| ---------------------- | ------------------------------------------------ |
+| **Base de données**    | `http://{{PG_API_SERVER}}:5000/dressing_virtuel` |
+| **Modèles IA**         | `http://{{MODELS_API_SERVER}}:5005/models`       |
+| **Tâches asynchrones** | `http://{{PG_API_SERVER}}:5010/celery`           |
+
+Les API sont développées avec **FastAPI**, et leur documentation interactive est disponible aux adresses suivantes :
+
+- Swagger UI : `http://localhost:5000/docs`
+- Redoc : `http://localhost:5000/redoc`
+
+Vous pouvez aussi consulter la documentation publique :
+
+- [Models](https://app.swaggerhub.com/apis/jcsolutions/models/0.1.0#/)
+- [Base de données](https://app.swaggerhub.com/apis/jcsolutions/dressing-virtuel/0.1.0)
+
+---
+
+## Contribution
+
+Les contributions sont les bienvenues !
+
+1. Forkez le repo
+2. Créez une branche (`git checkout -b feature-nouvelle-fonction`)
+3. Faites vos modifications et commit (`git commit -m "Ajout d'une nouvelle fonctionnalité"`)
+4. Poussez votre branche (`git push origin feature-nouvelle-fonction`)
+5. Créez une Pull Request
+
+Voir [`contributing.md`](contributing.md) pour plus de détails.
+
+---
+
+## Licence
+
+Ce projet est sous licence [MIT](https://choosealicense.com/licenses/mit/).
+
+---
+
+## Auteurs
+
+- [@Jhonatan Caldeira](https://github.com/JhonatanCaldeira)
+
+---
+
+## Remerciements
+
+- [Awesome Readme Templates](https://awesomeopensource.com/project/elangosundar/awesome-README-templates)
+- [Awesome README](https://github.com/matiassingers/awesome-readme)
+- [How to write a Good readme](https://bulldogjob.com/news/449-how-to-write-a-good-readme-for-your-github-project)
+
