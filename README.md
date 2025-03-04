@@ -1,10 +1,10 @@
 # Dressing Virtuel
 
 ## Table des Matières
-
 - [Description du Projet](#description-du-projet)
 - [Fonctionnalités](#fonctionnalités)
 - [Installation](#installation)
+- [Configuration de la Base de Données](#configuration-de-la-base-de-donnees)
 - [Configuration des Variables d'Environnement](#configuration-des-variables-denvironnement)
 - [API Reference](#api-reference)
 - [Contribution](#contribution)
@@ -15,23 +15,20 @@
 ---
 
 ## Description du Projet
-
 Dressing Virtuel est une application permettant de stocker et organiser des photos de tous les vêtements d'un utilisateur. Cela permet un accès rapide à sa collection de vêtements sans avoir besoin de se rendre physiquement à son dressing.
 
 En plus de cet accès simplifié, l'application propose des suggestions de tenues en fonction de l'occasion (réunion, sortie, week-end, etc.).
 
 ### Pourquoi Dressing Virtuel ?
-
 Contrairement à d'autres applications similaires, Dressing Virtuel ne requiert pas de prendre des photos de chaque vêtement individuellement. Son moteur **I2C1 (Image to Clothes v1)** utilise la vision par ordinateur pour extraire automatiquement les vêtements à partir de photos existantes (ex: Google Photos) et les classifier intelligemment.
 
 ### Engagement contre le Fast Fashion
-
-Dressing Virtuel aide à lutter contre la surconsommation vestimentaire en offrant un inventaire digitalisé des vêtements. Cela permet à l'utilisateur de vérifier s'il possède déjà un article avant d'en acheter un nouveau. De futures fonctionnalités permettront aussi d'identifier les vêtements peu utilisés pour favoriser la revente ou le don.
+Dressing Virtuel aide à lutter contre la surconsommation vestimentaire en offrant un inventaire digitalisé des vêtements. Cela permet à l'utilisateur de vérifier s'il possède déjà un article avant d'en acheter un nouveau. 
+De futures fonctionnalités permettront aussi d'identifier les vêtements peu utilisés pour favoriser la revente ou le don.
 
 ---
 
 ## Fonctionnalités
-
 - **Ajout automatique de vêtements** à partir de photos existantes
 - **Classification intelligente** des vêtements
 - **Suggestions de tenues** en fonction de l'occasion
@@ -69,12 +66,33 @@ Dressing Virtuel aide à lutter contre la surconsommation vestimentaire en offra
 
 ---
 
+## Configuration de la Base de Données
+Si vous ne disposez pas d'une instance PostgreSQL, vous pouvez utiliser l'image Docker fournie :
+
+```sh
+docker pull jhonatancaldeira/postgres_dressing-virtuel:latest
+
+docker run --name dressing_virtuel_db -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=your_password -e POSTGRES_DB=db_dressing_virtuel -p 5432:5432 -d jhonatancaldeira/postgres_dressing-virtuel:latest
+```
+
+Vérifiez que la base de données est bien en cours d'exécution avec :
+
+```sh
+docker ps
+```
+
+Pour accéder au terminal de la base de données :
+```sh
+docker exec -it dressing_virtuel_db psql -U admin -d db_dressing_virtuel
+```
+
+---
+
 ## Configuration des Variables d'Environnement
 
 Avant de lancer l'application, assurez-vous de configurer les variables d'environnement dans `config/.env` :
 
 Exemple minimal :
-
 ```ini
 # Dossiers de stockage
 IMAGE_TMP_DIR=./tmp
@@ -96,11 +114,11 @@ La liste complète des variables est disponible dans [`config/.env.example`](con
 
 Une fois les services démarrés, voici les principaux endpoints disponibles :
 
-| Service                | Endpoint                                         |
-| ---------------------- | ------------------------------------------------ |
-| **Base de données**    | `http://{{PG_API_SERVER}}:5000/dressing_virtuel` |
-| **Modèles IA**         | `http://{{MODELS_API_SERVER}}:5005/models`       |
-| **Tâches asynchrones** | `http://{{PG_API_SERVER}}:5010/celery`           |
+| Service | Endpoint |
+|---------|---------|
+| **Base de données** | `http://{{PG_API_SERVER}}:5000/dressing_virtuel` |
+| **Modèles IA** | `http://{{MODELS_API_SERVER}}:5005/models` |
+| **Tâches asynchrones** | `http://{{PG_API_SERVER}}:5010/celery` |
 
 Les API sont développées avec **FastAPI**, et leur documentation interactive est disponible aux adresses suivantes :
 
@@ -108,7 +126,6 @@ Les API sont développées avec **FastAPI**, et leur documentation interactive e
 - Redoc : `http://localhost:5000/redoc`
 
 Vous pouvez aussi consulter la documentation publique :
-
 - [Models](https://app.swaggerhub.com/apis/jcsolutions/models/0.1.0#/)
 - [Base de données](https://app.swaggerhub.com/apis/jcsolutions/dressing-virtuel/0.1.0)
 
