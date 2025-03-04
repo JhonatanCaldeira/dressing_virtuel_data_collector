@@ -11,6 +11,7 @@
 - [Licence](#licence)
 - [Auteurs](#auteurs)
 - [Remerciements](#remerciements)
+- [Références](#références)
 
 ---
 
@@ -67,11 +68,9 @@ De futures fonctionnalités permettront aussi d'identifier les vêtements peu ut
 ---
 
 ## Configuration de la Base de Données
-Si vous ne disposez pas d'une instance PostgreSQL, vous pouvez utiliser l'image Docker fournie :
+Si vous ne disposez pas d'une instance PostgreSQL, vous pouvez en déployer une rapidement avec Docker :
 
 ```sh
-docker pull jhonatancaldeira/postgres_dressing-virtuel:latest
-
 docker run --name dressing_virtuel_db -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=your_password -e POSTGRES_DB=db_dressing_virtuel -p 5432:5432 -d jhonatancaldeira/postgres_dressing-virtuel:latest
 ```
 
@@ -157,9 +156,8 @@ Ce projet est sous licence [MIT](https://choosealicense.com/licenses/mit/).
 
 ---
 
-## Remerciements
+## Références
 
-- [Awesome Readme Templates](https://awesomeopensource.com/project/elangosundar/awesome-README-templates)
-- [Awesome README](https://github.com/matiassingers/awesome-readme)
-- [How to write a Good readme](https://bulldogjob.com/news/449-how-to-write-a-good-readme-for-your-github-project)
+- Jung, Myong Chol et Clark, Jesse. *Marqo-FashionCLIP and Marqo-FashionSigLIP*, 2024. Version 1.0.0. Disponible sur : [https://github.com/marqo-ai/marqo-FashionCLIP](https://github.com/marqo-ai/marqo-FashionCLIP)
+- Xie, Enze et al. *SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers*, 2021. Disponible sur : [https://arxiv.org/abs/2105.15203](https://arxiv.org/abs/2105.15203)
 
